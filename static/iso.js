@@ -6,7 +6,7 @@
 // vesselShape, liquidColor, roundedPath, pumpTube, pumpColor, pumpTop, TOP, TOP_ICON, topReading, targetOf, spreadLabels, LEG.
 "use strict";
 
-const ISO = { rot: 0, C: Math.cos(Math.PI / 6), S: 0.5, turned: false, autoFor: null };
+const ISO = { rot: 0, C: Math.cos(Math.PI / 6), S: 0.5, turned: false, autoFor: null, hover: null, hoverT: null };
 const isoAvatarX = {};
 
 // world (x, y = depth toward the viewer, z = height) → screen; rot turns the bench about its centre in 90° steps
@@ -223,8 +223,8 @@ function isoDevice(g, P, id, d, cx, cy, f) {
   const rd = typeof topReading === "function" ? topReading(d) : null;
   if (rd && !frontShown) el("text", { x: (L + Math.max(...xs)) / 2, y: lb + 52, class: "lbl-sub" }, grp, rd);
   grp.addEventListener("mousemove", (e) => { tip(e, deviceTip(id, d)); S.hoverDev = id; });
-  grp.addEventListener("mouseenter", () => isoXray(id));
-  grp.addEventListener("mouseleave", () => { hideTip(); if (S.hoverDev === id) S.hoverDev = null; isoXray(null); });
+  grp.addEventListener("mouseenter", () => isoHover(id));
+  grp.addEventListener("mouseleave", () => { hideTip(); if (S.hoverDev === id) S.hoverDev = null; isoHover(null); });
   void f;
   return { world, screen, close };
 }
@@ -320,11 +320,19 @@ function isoBlockers(ids, cls) {
     if (boxes.some((q) => isoOverlap(r, q))) n.classList.add(cls);
   }
 }
+// hover: moving between the parts of one instrument (faces, its vessels) fires leave / enter pairs; clearing only after a short
+// pause, and only if nothing else was entered, keeps the see-through steady instead of flickering
+function isoHover(id) {
+  clearTimeout(ISO.hoverT);
+  if (id) { if (ISO.hover !== id) { ISO.hover = id; isoXray(id); } return; }
+  ISO.hoverT = setTimeout(() => { ISO.hover = null; isoXray(null); }, 120);
+}
 function isoXray(id) {
   for (const n of $("world").querySelectorAll(".xray-block")) n.classList.remove("xray-block");
   if (!id || S.view !== "iso") return;
   const f = S.frames[S.idx]; if (!f) return;
-  const ids = new Set([id, ...Object.entries(f.containers).filter(([, c]) => c.location === id).map(([k]) => k)]);
+  const loc = f.containers[id]?.location, owner = f.devices[loc] ? loc : id;          // hovering a vessel on an instrument = that group
+  const ids = new Set([id, owner, ...Object.entries(f.containers).filter(([, c]) => c.location === owner).map(([k]) => k)]);
   isoBlockers(ids, "xray-block");
 }
 function isoLayers(f) {                                // while a group works, whatever stands in front of it turns see-through
@@ -340,7 +348,8 @@ function isoTurn(k) {
 }
 document.addEventListener("keydown", (e) => {
   if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName) || S.view !== "iso") return;
-  if (e.key === "[") isoTurn(-1); else if (e.key === "]") isoTurn(1);
+  if (typeof SB !== "undefined" && SB.drag) return;              // carrying a device: E turns the device (bench.js)
+  if (e.key === "[" || e.key === "q" || e.key === "Q") isoTurn(-1); else if (e.key === "]") isoTurn(1);
 });
 document.getElementById("isoLeft")?.addEventListener("click", () => isoTurn(-1));
 document.getElementById("isoRight")?.addEventListener("click", () => isoTurn(1));

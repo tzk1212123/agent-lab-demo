@@ -177,8 +177,8 @@ function drawVessel(g, cid, c, x, y, opts = {}) {
     el("text", { x: 0, y: ly + 22, class: "lbl-sub" }, grp, `${fmt(vol, 3)} mL`);
   }
   grp.addEventListener("mousemove", (e) => tip(e, vesselTip(cid, c)));
-  grp.addEventListener("mouseenter", () => typeof frontXray === "function" && (S.view === "front" || S.view === "iso") && frontXray(cid));
-  grp.addEventListener("mouseleave", () => { hideTip(); if (typeof frontXray === "function") frontXray(null); });
+  grp.addEventListener("mouseenter", () => { if (S.view === "iso") isoHover(cid); else if (typeof frontXray === "function" && S.view === "front") frontXray(cid); });
+  grp.addEventListener("mouseleave", () => { hideTip(); if (S.view === "iso") isoHover(null); else if (typeof frontXray === "function") frontXray(null); });
   return { x, y, top: y - H, w: shp.w, h: H, level: y - H * frac };   // level: liquid surface (for vortex / bubbles)
 }
 function vesselTip(cid, c) {
@@ -777,7 +777,7 @@ function render() {
     const box = S.view === "front" ? renderFront(svg, f, st) : S.view === "iso" ? renderIso(svg, f, st) : renderTop(svg, f, st);
     if (typeof pumpGhosts === "function") pumpGhosts(svg);
     if (S.view === "front" && typeof frontLayers === "function") frontLayers(f, st);
-    if (S.view === "iso" && typeof isoLayers === "function") isoLayers(f);
+    if (S.view === "iso" && typeof isoLayers === "function") { isoLayers(f); isoXray(ISO.hover); }   // keep the hover see-through across redraws
     if (typeof demoTick === "function") demoTick(f);
     if (typeof renderConsole === "function") renderConsole(f);
     if (typeof autoFocus === "function") autoFocus(f);

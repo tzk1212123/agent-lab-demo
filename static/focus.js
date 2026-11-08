@@ -145,7 +145,7 @@ function frontLayers(f, st) {
 
 // Hover see-through: in front view, hovering an instrument / container makes things in front of it translucent
 function frontXray(id) {
-  if (S.view === "iso" && typeof isoXray === "function") return isoXray(id);
+  if (S.view === "iso") return;                            // 2.5D view: hover is handled per whole instrument / vessel in iso.js
   for (const n of $("world").querySelectorAll(".xray-block")) n.classList.remove("xray-block");
   if (!id || S.view !== "front") return;
   const f = S.frames[S.idx], st = S.static; if (!f || !st) return;

@@ -272,7 +272,7 @@ document.addEventListener("keydown", (e) => {
   if (e.key === "ArrowRight") { e.preventDefault(); togglePanel(); }
   else if (e.key === "ArrowDown") { e.preventDefault(); toggleDrawer(); }
   else if (e.key === "Escape") { if (!$("drawer").hidden) toggleDrawer(false); }
-  else if (e.key === "e" || e.key === "E") rotateKey();
+  else if (e.key === "e" || e.key === "E") { if (S.view === "iso" && !SB.drag) isoTurn(1); else rotateKey(); }   // 2.5D view: E turns the view
 });
 $("panelHandle").onclick = () => togglePanel();
 $("drawerHandle").onclick = () => toggleDrawer();

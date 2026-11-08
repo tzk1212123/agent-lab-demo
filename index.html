@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>agent lab · Experiment studio</title>
-<link rel="stylesheet" href="static/studio.css?v=20261108163108">
+<link rel="stylesheet" href="static/studio.css?v=20261108164439">
 </head>
 <body class="panel-hidden demo-hidden">
 <header class="bar">
@@ -13,7 +13,7 @@
     <button data-view="table" class="on" title="Shortcut 3: pick an experiment, see all equipment">Prep library</button>
     <button data-view="top" title="Shortcut 2: arrange the bench">Top view</button>
     <button data-view="front" title="Shortcut 1: flat front view">Front view</button>
-    <button data-view="iso" title="Shortcut 4: watch the experiment (2.5D), turn with [ and ]">2.5D view</button>
+    <button data-view="iso" title="Shortcut 4: watch the experiment (2.5D), turn with Q and E">2.5D view</button>
   </nav>
   <div class="exp" id="expTitle">No experiment loaded</div>
   <div class="clock"><span>Sim time</span><b id="simTime">—</b></div>
@@ -53,12 +53,12 @@
       <button id="zoomOut" title="Zoom out (−)">－</button>
       <button id="fit" title="Fit all (F)">⊡</button>
       <button id="focusBtn" title="Focus the working equipment group (G)">◎</button>
-      <button id="isoLeft" class="iso-only" title="Turn the bench left ([)">⟲</button>
-      <button id="isoRight" class="iso-only" title="Turn the bench right (])">⟳</button>
+      <button id="isoLeft" class="iso-only" title="Turn the bench left (Q)">⟲</button>
+      <button id="isoRight" class="iso-only" title="Turn the bench right (E)">⟳</button>
     </div>
     <div class="hud-bubble" id="bubble" hidden></div>
     <svg id="benchOverlay" aria-hidden="true"></svg>
-    <div class="hint">? shortcuts · ← import · Enter skip step · ↓ equipment · → sidebar · E rotate · wheel zoom · drag pan · 1/2/3/4 views · [ ] turn 2.5D · F fit · G focus · Space run/pause</div>
+    <div class="hint">? shortcuts · ← import · Enter skip step · ↓ equipment · → sidebar · E rotate · wheel zoom · drag pan · 1/2/3/4 views · Q / E turn 2.5D · F fit · G focus · Space run/pause</div>
     <button id="panelHandle" class="edge-handle" title="Sidebar (→)">‹</button>
     <button id="demoEdge" class="edge-handle left" title="Import experiment (←)">›</button>
     <button id="drawerHandle" class="drawer-handle" title="Equipment drawer (↓)">Equipment ▴</button>
@@ -187,7 +187,7 @@
       <section><h2>Views</h2>
         <div class="ks"><kbd>3</kbd><span>Prep library</span></div>
         <div class="ks"><kbd>2</kbd><span>Top view (arrange the bench)</span></div>
-        <div class="ks"><kbd>4</kbd><span>2.5D view (watch the run); <kbd>[</kbd> <kbd>]</kbd> turn the bench</span></div>
+        <div class="ks"><kbd>4</kbd><span>2.5D view (watch the run); <kbd>Q</kbd> <kbd>E</kbd> turn the bench</span></div>
         <div class="ks"><kbd>1</kbd><span>Front view (flat)</span></div>
       </section>
       <section><h2>Panels</h2>
@@ -244,23 +244,23 @@
 </div>
 <div id="tip" class="tip" hidden></div>
 <div id="dragGhost" class="drag-ghost" hidden></div>
-<script src="static/static_api.js?v=20261108163108"></script>
-<script src="static/studio.js?v=20261108163108"></script>
-<script src="static/models.js?v=20261108163108"></script>
-<script src="static/pump.js?v=20261108163108"></script>
-<script src="static/fx.js?v=20261108163108"></script>
-<script src="static/fxmore.js?v=20261108163108"></script>
-<script src="static/bench.js?v=20261108163108"></script>
-<script src="static/focus.js?v=20261108163108"></script>
-<script src="static/iso.js?v=20261108163108"></script>
-<script src="static/paperlink.js?v=20261108163108"></script>
-<script src="static/gear.js?v=20261108163108"></script>
-<script src="static/prep.js?v=20261108163108"></script>
-<script src="static/demo.js?v=20261108163108"></script>
-<script src="static/planform.js?v=20261108163108"></script>
-<script src="static/genplan.js?v=20261108163108"></script>
-<script src="static/console.js?v=20261108163108"></script>
-<script src="static/devinfo.js?v=20261108163108"></script>
-<script src="static/welcome.js?v=20261108163108"></script>
+<script src="static/static_api.js?v=20261108164439"></script>
+<script src="static/studio.js?v=20261108164439"></script>
+<script src="static/models.js?v=20261108164439"></script>
+<script src="static/pump.js?v=20261108164439"></script>
+<script src="static/fx.js?v=20261108164439"></script>
+<script src="static/fxmore.js?v=20261108164439"></script>
+<script src="static/bench.js?v=20261108164439"></script>
+<script src="static/focus.js?v=20261108164439"></script>
+<script src="static/iso.js?v=20261108164439"></script>
+<script src="static/paperlink.js?v=20261108164439"></script>
+<script src="static/gear.js?v=20261108164439"></script>
+<script src="static/prep.js?v=20261108164439"></script>
+<script src="static/demo.js?v=20261108164439"></script>
+<script src="static/planform.js?v=20261108164439"></script>
+<script src="static/genplan.js?v=20261108164439"></script>
+<script src="static/console.js?v=20261108164439"></script>
+<script src="static/devinfo.js?v=20261108164439"></script>
+<script src="static/welcome.js?v=20261108164439"></script>
 </body>
 </html>
