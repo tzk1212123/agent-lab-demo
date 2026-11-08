@@ -684,3 +684,10 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 7px; border-radius: 6
 .mdl-lit { fill: #fff6c8; filter: drop-shadow(0 0 8px #fff3a0); }
 .fx-rec { fill: #ff4a3d; animation: fxglow .9s ease-in-out infinite; }
 #world .arm.busy { opacity: .72; }   /* working arm stays visible but does not hide the vessels it works on */
+/* per-command actions (fxmore.js fxCommands) */
+.fx-once { animation: fxonce 2.6s ease-out forwards !important; }
+@keyframes fxonce { 0% { opacity: 0; } 12% { opacity: 1; } 70% { opacity: 1; } 100% { opacity: 0; } }
+.fx-tag { fill: #ffe9b0; font-size: 22px; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: #1d3528; stroke-width: 4px; }
+.fx-blink { fill: #b9f0a0; opacity: .5; }
+.fx-head { fill: #4f6b5c; stroke: #dfe6de; stroke-width: 2; }
+.fx-tip { stroke: #f4f1e6; stroke-width: 4; stroke-linecap: round; }

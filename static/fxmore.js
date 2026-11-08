@@ -133,11 +133,6 @@ function fxMore(ctx) {
     if (cat === "balance" && onIt.length) {                              // display settling while something sits on the pan
       E("rect", { x: b.L + b.W * 0.2, y: (TOP ? b.T + b.H * 0.8 : b.yb - 18), width: b.W * 0.6, height: 6, rx: 3, class: "fx-settle" }, g);
     }
-    if (cat === "thermostatic_bath" && onIt.length) {
-      const T = best(d, "bath_temperature") ?? 22;
-      for (let i = 0; i < 3; i++) E("path", { d: `M${b.L + b.W * (0.25 + i * 0.25)},${b.T + 6} q6,-12 0,-24 q-6,-12 0,-24`,
-        class: T > 30 ? "fx-haze" : "fx-fog", style: `animation-delay:${i * 0.4}s` }, g);
-    }
     if (cat === "cold_bath") {                                           // cold vapour rolling off the bath
       for (let i = 0; i < 3; i++) E("ellipse", { cx: b.L + b.W * (0.3 + i * 0.2), cy: b.T, rx: 18, ry: 8, class: "fx-fog", style: `animation-delay:${i * 0.5}s` }, g);
     }
@@ -199,11 +194,6 @@ function fxMore(ctx) {
         for (let i = 0; i < 6; i++) E("circle", { cx: x - 15 + (i % 3) * 15, cy: y, r: 4 + (i % 2) * 2, class: "fx-bubble", style: `animation-delay:${i * 0.22}s` }, g);
       }
     }
-    if (cat === "liquid_handler" && busy) {                              // pipette tip shuttling between wells
-      const y = TOP ? b.T + b.H * 0.4 : b.T + b.H * 0.4;
-      const drop = E("circle", { r: 5, class: "fx-drop", fill: "#9fd0e6" }, g);
-      E("animateMotion", { dur: "1.8s", repeatCount: "indefinite", path: `M${b.L + b.W * 0.25},${y} Q${b.x},${y - 60} ${b.L + b.W * 0.75},${y} Q${b.x},${y - 60} ${b.L + b.W * 0.25},${y}` }, drop);
-    }
     if (cat === "proxy_viscometer" && busy) {                            // viscous drip into the catch dish
       for (let i = 0; i < 2; i++) E("circle", { cx: b.L + b.W * 0.8, cy: (TOP ? b.T + b.H / 2 : b.T + b.H * 0.4), r: 5, class: "fx-fall fx-slow", fill: "#d9c79a", style: `animation-delay:${i * 0.9}s` }, g);
     }
@@ -212,6 +202,143 @@ function fxMore(ctx) {
       E("circle", { cx: gx, cy: gy, r: 16, class: "fx-gauge" }, g);
       const n = E("line", { x1: gx, y1: gy, x2: gx + 12, y2: gy - 8, class: "fx-needle" }, g);
       E("animateTransform", { attributeName: "transform", type: "rotate", values: `-8 ${gx} ${gy};8 ${gx} ${gy};-8 ${gx} ${gy}`, dur: "0.5s", repeatCount: "indefinite" }, n);
+    }
+  }
+  fxCommands(ctx);                                                      // per-command actions (below)
+}
+
+
+// ---------------------------------------------------------------- per-command actions of the common instruments
+// Lasting commands animate while the instrument is busy; instant ones (tare, blank, set wavelength …) play once ("fx-once")
+// right after the command. The overlay redraws on every new command, so a one-shot replays exactly once.
+function fxCommands(ctx) {
+  const { g, f, TOP, pos, holders, top } = ctx;
+  const boxes = S.geo.boxes || {}, E = fxEl;
+  const failed = (e) => Object.values(e.result || {}).some((r) => r && r.ok === false);
+  const last = {}; let newest = null;                                    // each device's latest successful command up to this frame
+  for (const e of S.events || []) {
+    if (e.seq >= (f.event_seq ?? Infinity)) break;
+    if (e.type === "command" && !failed(e)) { last[e.device] = e; newest = e; }
+  }
+  const lastEv = (id) => last[id] || null;
+  // one-shots play right after their command, and only while it is the newest one (so they don't replay on later redraws)
+  const fresh = (ev, s = 8) => ev && ev === newest && f.t - ev.t < s;
+  const tag = (x, y, text, cls = "fx-tag fx-once") => { const t = E("text", { x, y, class: cls }, g); t.textContent = text; return t; };
+  const devOf = (cat) => Object.entries(f.devices).find(([, d]) => d.category === cat)?.[0];
+
+  for (const [id, d] of Object.entries(f.devices)) {
+    const b = boxes[id]; if (!b) continue;
+    const ev = lastEv(id), cmd = ev?.command, P = ev?.params || {}, busy = (best(d, "running") ?? 0) > 0;
+    const yTop = TOP ? b.T - 10 : b.T - 18;
+    switch (d.category) {
+      case "balance":
+        if (cmd === "tare" && fresh(ev)) tag(b.x, yTop, "→ 0.0000 g ←");
+        else if (cmd === "read" && fresh(ev, 4)) tag(b.x, yTop, "read");
+        break;
+      case "ph_meter": case "conductivity_meter":
+        if (cmd === "read" && fresh(ev, 4)) E("rect", { x: b.L + b.W * 0.1, y: TOP ? b.T + 10 : b.T + 4, width: b.W * 0.5, height: TOP ? b.H * 0.4 : b.H * 0.6, rx: 6, class: "fx-blink fx-once" }, g);
+        break;
+      case "spectrophotometer": {
+        const y = TOP ? b.T + b.H * 0.5 : b.T + b.H * 0.35;
+        if (cmd === "blank" && fresh(ev)) {                                 // zeroing: white light, display to 0
+          E("line", { x1: b.L + b.W * 0.08, y1: y, x2: b.L + b.W * 0.92, y2: y, class: "fx-beam fx-once", stroke: "#ffffff" }, g);
+          tag(b.x, yTop, "BLANK → A 0.000");
+        } else if (cmd === "set_wavelength" && fresh(ev)) {                // monochromator turning: colour sweep to the new wavelength
+          const w = +P.wavelength || 550;
+          for (let i = 0; i < 6; i++) E("rect", { x: b.L + b.W * (0.2 + i * 0.1), y: yTop - 18, width: b.W * 0.1, height: 10, fill: fxWaveColor(380 + i * 60), class: "fx-once" }, g);
+          tag(b.x, yTop - 26, `λ → ${w} nm`);
+        } else if (cmd === "measure" && fresh(ev, 4)) {
+          E("circle", { cx: b.L + b.W * 0.92, cy: y, r: 12, class: "fx-flash fx-once" }, g);
+        }
+        break;
+      }
+      case "thermostatic_bath": {
+        const T = best(d, "bath_temperature") ?? 22, sp = d.setpoints?.["set_temperature.temperature"];
+        const on = cmd !== "stop" && (cmd === "start" || cmd === "set_temperature" || sp != null);
+        if (on) {                                                           // circulation in the bath window
+          const cx = b.x, cy = TOP ? b.T + b.H / 2 : b.T + b.H * 0.3, ry = TOP ? b.H * 0.25 : 14;
+          ctx.movers(g, `M${cx - b.W * 0.3},${cy} a${b.W * 0.3},${ry} 0 1,0 ${b.W * 0.6},0 a${b.W * 0.3},${ry} 0 1,0 ${-b.W * 0.6},0`, 4, "fx-speck", { r: 3, fill: "#e8f6ff" }, 2.4);
+          if (sp != null && Math.abs(sp - T) > 1) tag(b.x, yTop, `${sp > T ? "▲ heating" : "▼ cooling"} → ${sp} °C`, "fx-tag");
+        }
+        if (T > 35 || T < 15) for (let i = 0; i < 3; i++) E("path", { d: `M${b.L + b.W * (0.25 + i * 0.25)},${b.T + 6} q6,-12 0,-24 q-6,-12 0,-24`,
+          class: T > 35 ? "fx-haze" : "fx-fog", style: `animation-delay:${i * 0.4}s` }, g);
+        if (cmd === "stop" && fresh(ev)) tag(b.x, yTop, "circulation off");
+        break;
+      }
+      case "heater_shaker": {
+        const T = best(d, "temperature") ?? 22, sp = d.setpoints?.["set_temperature.temperature"];
+        if (cmd !== "heater_off" && ((sp != null && sp > 30) || T > 30))     // heated block
+          E("ellipse", { cx: b.x, cy: TOP ? b.T + b.H / 2 : b.T + b.H * 0.4, rx: b.W * 0.45, ry: TOP ? b.H * 0.4 : 8, class: "fx-glow", fill: "rgb(255,150,60)" }, g);
+        if ((cmd === "open_latch" || cmd === "close_latch") && fresh(ev)) tag(b.x, yTop, cmd === "open_latch" ? "latch open" : "latch closed");
+        break;
+      }
+      case "plate_reader": {
+        if (cmd === "set_wavelength" && fresh(ev)) E("rect", { x: b.L + b.W * 0.08, y: TOP ? b.T + b.H * 0.55 : b.yb - b.H * 0.34, width: b.W * 0.6, height: 10, rx: 3, fill: fxWaveColor(+P.wavelength), class: "fx-once" }, g);
+        const sp = d.setpoints?.["set_temperature.temperature"];
+        if (sp != null && sp > 30) for (let i = 0; i < 2; i++) E("path", { d: `M${b.L + b.W * (0.4 + i * 0.2)},${b.T} q6,-12 0,-24 q-6,-12 0,-24`, class: "fx-haze", style: `animation-delay:${i * 0.5}s` }, g);
+        break;
+      }
+      case "foam_analyzer": {
+        const p = Object.entries(f.containers).filter(([, c]) => c.location === id).map(([k]) => pos[k]).find(Boolean);
+        if (cmd === "measure" && fresh(ev, 4)) E("circle", { cx: b.x, cy: TOP ? b.T + b.H / 2 : b.T + b.H * 0.5, r: 30, class: "fx-flash fx-once" }, g);
+        if ((busy || fresh(ev, 6)) && cmd === "drain" && p) {                                 // column emptied into the rig's waste bottle
+          const d0 = ctx.arcPath(p.x, p.y - 6, b.L + b.W * 0.95, b.yb - 6, 20);
+          E("path", { d: d0, class: "fx-stream", stroke: "#cfe9f7" }, g);
+          ctx.movers(g, d0, 4, "fx-drop", { fill: "#cfe9f7", r: 4 }, 0.9);
+        }
+        if ((busy || fresh(ev, 6)) && cmd === "rinse" && p) {                                 // rinse water sprayed in from the top
+          const d0 = `M${p.x + 60},${p.top - 50} Q${p.x + 20},${p.top - 60} ${p.x},${p.top + 10}`;
+          E("path", { d: d0, class: "fx-stream", stroke: "#e8f6ff" }, g);
+          ctx.movers(g, d0, 5, "fx-drop", { fill: "#e8f6ff", r: 4 }, 0.8);
+        }
+        break;
+      }
+      case "liquid_handler": {
+        if (!busy && !fresh(ev, 6)) break;
+        const head = (path, dur = 2.2) => {                                // pipette tip (with a drop) following a path
+          const tip = E("g", {}, g);
+          E("rect", { x: -7, y: -40, width: 14, height: 30, rx: 3, class: "fx-head" }, tip);
+          E("line", { x1: 0, y1: -10, x2: 0, y2: 6, class: "fx-tip" }, tip);
+          E("circle", { cx: 0, cy: 9, r: 4, class: "fx-drop", fill: "#9fd0e6" }, tip);
+          E("animateMotion", { dur: `${dur}s`, repeatCount: "indefinite", path }, tip);
+        };
+        const lift = TOP ? 40 : 110;
+        const at = (cid) => cid && top(cid);
+        if (cmd === "transfer" && at(P.src) && at(P.dst)) {                // aspirate at src → up → across → dispense at dst
+          const s0 = at(P.src), d0 = at(P.dst);
+          head(`M${s0.x},${s0.y} V${s0.y - lift} H${d0.x} V${d0.y} V${d0.y - lift} H${s0.x} V${s0.y}`, 3);
+        } else if (cmd === "mix" && at(P.container)) {                     // up and down in the same well
+          const c = at(P.container);
+          head(`M${c.x},${c.y} V${c.y - 40} V${c.y}`, 0.8);
+        } else if (cmd === "deposit_droplets" && at(P.src)) {              // drops placed on the contact-angle stage
+          const st = holders[devOf("contact_angle_stage")], s0 = at(P.src);
+          if (st) {
+            head(`M${s0.x},${s0.y} V${s0.y - lift} H${st.x} V${st.y - 20} V${st.y - lift} H${s0.x} V${s0.y}`, 3);
+            for (let i = 0; i < 3; i++) E("circle", { cx: st.x - 20 + i * 20, cy: st.y - 30, r: 4, class: "fx-fall", fill: "#9fd0e6", style: `animation-delay:${i * 0.7}s` }, g);
+          }
+        } else if (cmd === "image_droplets") {                             // camera picked up, side images of the drops
+          const st = holders[devOf("contact_angle_stage")] || { x: b.x, y: b.T + b.H * 0.5 };
+          E("circle", { cx: st.x, cy: st.y - 20, r: 30, class: "fx-flash" }, g);
+          tag(st.x, st.y - 70, "📷", "fx-tag");
+        } else if (cmd === "measure_viscosity" && at(P.src)) {             // slow dispense onto the balance dish
+          const v = holders[devOf("proxy_viscometer")] || holders[devOf("balance")], s0 = at(P.src);
+          if (v) {
+            head(`M${s0.x},${s0.y} V${s0.y - lift} H${v.x} V${v.y - 30}`, 4);
+            for (let i = 0; i < 2; i++) E("circle", { cx: v.x, cy: v.y - 30, r: 5, class: "fx-fall fx-slow", fill: "#d9c79a", style: `animation-delay:${i * 0.9}s` }, g);
+          }
+        } else if (cmd === "home") {
+          head(`M${b.x},${b.T + b.H * 0.3} L${b.L + b.W * 0.15},${b.T + b.H * 0.15}`, 1.2);
+        } else {
+          head(`M${b.L + b.W * 0.25},${b.T + b.H * 0.4} Q${b.x},${b.T + b.H * 0.25} ${b.L + b.W * 0.75},${b.T + b.H * 0.4}`, 1.8);
+        }
+        break;
+      }
+      case "incubator_shaker":
+        if ((cmd === "start" || cmd === "stop") && fresh(ev)) tag(b.x, yTop, cmd === "start" ? "shaking on" : "shaking off");
+        break;
+      case "hotplate_stirrer":
+        if ((cmd === "heater_off" || cmd === "stir_off") && fresh(ev)) tag(b.x, yTop, cmd === "heater_off" ? "heater off" : "stirring off");
+        break;
     }
   }
 }
