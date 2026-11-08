@@ -628,3 +628,12 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 7px; border-radius: 6
   body .stage-wrap, body.demo-hidden .stage-wrap, body.panel-hidden .stage-wrap, body.demo-hidden.panel-hidden .stage-wrap { grid-template-columns: minmax(0, 1fr); }
 }
 .wl-online { margin: 8px 0 0; padding: 8px 12px; border-radius: 10px; font-size: 12.5px; color: #f3e3b5; border: 1px solid rgba(255, 214, 107, .4); background: rgba(255, 214, 107, .07); }
+
+/* Instrument action animations (front view) */
+.mdl-shake { animation: mdlShake .18s ease-in-out infinite alternate; transform-box: fill-box; }
+@keyframes mdlShake { from { transform: translateX(-3px); } to { transform: translateX(3px); } }
+.mdl-swing { animation: mdlSwing 2.4s ease-in-out infinite alternate; }
+@keyframes mdlSwing { from { transform: rotate(-6deg); } to { transform: rotate(6deg); } }
+.mdl-beam { filter: drop-shadow(0 0 6px currentColor); animation: mdlPulse 1.2s ease-in-out infinite alternate; }
+.mdl-beam-line { stroke-width: 4; stroke-linecap: round; opacity: .85; animation: mdlPulse 1.2s ease-in-out infinite alternate; }
+@keyframes mdlPulse { from { opacity: .55; } to { opacity: 1; } }

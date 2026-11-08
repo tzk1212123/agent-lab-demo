@@ -30,6 +30,15 @@ const M = {
   },
 };
 const mOn = (d, f) => (best(d, f) ?? 0) > 0;
+function mWaveColor(nm) {                             // visible wavelength → display colour (UV / IR shown violet / deep red)
+  const w = Math.max(380, Math.min(700, nm || 550));
+  const stops = [[380, [130, 0, 200]], [440, [40, 60, 255]], [490, [0, 200, 255]], [530, [60, 230, 60]], [580, [255, 230, 0]], [620, [255, 120, 0]], [700, [220, 0, 0]]];
+  for (let i = 1; i < stops.length; i++) {
+    const [a, ca] = stops[i - 1], [b, cb] = stops[i];
+    if (w <= b) { const k = (w - a) / (b - a); return `rgb(${ca.map((v, j) => Math.round(v + (cb[j] - v) * k)).join(",")})`; }
+  }
+  return "rgb(220,0,0)";
+}
 const mNum = (d, f, n = 3) => { const v = best(d, f); return typeof v === "number" ? fmt(v, n) : "—"; };
 
 // ---------------------------------------------------------------- front view
@@ -65,6 +74,10 @@ const FRONT = {
     M.rect(g, L + W * 0.05, T + H * 0.05, W * 0.3, H * 0.25, "dev-dark");
     M.rect(g, L + W * 0.65, T + H * 0.05, W * 0.3, H * 0.25, "dev-dark");
     M.rect(g, L + W * 0.4, T + H * 0.12, W * 0.2, H * 0.16, "dev-panel");                   // sample chamber
+    if ((best(d, "intensity") ?? 0) > 0) {                                                  // excitation in, emission out
+      M.line(g, L + W * 0.35, T + H * 0.17, L + W * 0.47, T + H * 0.2, "mdl-beam-line", { stroke: mWaveColor(best(d, "excitation")) });
+      M.line(g, L + W * 0.53, T + H * 0.2, L + W * 0.65, T + H * 0.17, "mdl-beam-line", { stroke: mWaveColor(best(d, "emission")) });
+    }
     M.screen(g, L + W * 0.06, T + H * 0.45, W * 0.38, H * 0.38, `${mNum(d, "intensity", 4)}`, `Ex ${mNum(d, "excitation")} / Em ${mNum(d, "emission")}`);
     return { x, y: T + H * 0.12 };
   },
@@ -98,7 +111,7 @@ const FRONT = {
   },
   heater_shaker({ g, x, L, T, W, H, d, yb }) {                  // heater-shaker module: base + aluminium block + side clamps
     M.rect(g, L, yb - H * 0.55, W, H * 0.55, "dev-body");
-    M.rect(g, L + W * 0.1, T, W * 0.8, H * 0.45, "mdl-metal");
+    M.rect(g, L + W * 0.1, T, W * 0.8, H * 0.45, "mdl-metal", (best(d, "speed") ?? 0) > 50 ? { class: "mdl-metal mdl-shake" } : {});
     const latch = mOn(d, "latch");
     M.rect(g, L + W * 0.02, T + (latch ? 0 : H * 0.15), W * 0.06, H * 0.3, "dev-dark");
     M.rect(g, L + W * 0.92, T + (latch ? 0 : H * 0.15), W * 0.06, H * 0.3, "dev-dark");
@@ -108,7 +121,7 @@ const FRONT = {
   incubator_shaker({ g, x, L, T, W, H, d }) {                   // incubator shaker: cabinet + glass door + shaking platform
     M.rect(g, L, T, W, H, "dev-body");
     M.window(g, L + W * 0.06, T + H * 0.08, W * 0.88, H * 0.62);
-    M.rect(g, L + W * 0.1, T + H * 0.58, W * 0.8, H * 0.05, "mdl-metal");                   // shaking platform
+    M.rect(g, L + W * 0.1, T + H * 0.58, W * 0.8, H * 0.05, (best(d, "speed") ?? 0) > 20 ? "mdl-metal mdl-shake" : "mdl-metal");   // shaking platform
     M.screen(g, L + W * 0.06, T + H * 0.76, W * 0.4, H * 0.16, `${mNum(d, "temperature")} °C`, `${mNum(d, "speed", 4)} rpm`);
     M.knob(g, L + W * 0.8, T + H * 0.84, H * 0.05);
     return { x, y: T + H * 0.58, spread: W * 0.75 };
@@ -128,8 +141,10 @@ const FRONT = {
   optrode({ g, x, L, T, W, H, d, yb }) {                        // optrode: small box + coiled fibre + probe holder
     M.rect(g, L, T, W, H, "dev-body");
     M.circ(g, L + W * 0.3, T + H * 0.5, H * 0.3, "mdl-fiber");
-    M.rect(g, L + W * 0.55, T + H * 0.2, W * 0.35, H * 0.5, "screen");
+    const A = best(d, "absorbance"), wl = best(d, "wavelength");
+    M.screen(g, L + W * 0.5, T + H * 0.15, W * 0.45, H * 0.6, A == null ? "—" : `A ${fmt(A, 3)}`, wl ? `${fmt(wl, 3)} nm` : "");
     M.rect(g, L + W - 10, T - 140, 6, 140, "dev-dark");
+    if (A != null && wl) M.circ(g, L + W - 7, T - 140, 9, "mdl-beam", { fill: mWaveColor(wl) });      // light at the measuring wavelength
     return { x, y: T, port: { x: L + W - 7, y: T - 140 } };
   },
   plate_reader({ g, x, L, T, W, H, d, yb }) {                   // plate reader: body + plate carrier sticking out front
@@ -161,6 +176,8 @@ const FRONT = {
     M.rect(g, L, yb - H * 0.5, W, H * 0.5, "dev-body");
     M.rect(g, x - W * 0.3, yb - H * 0.62, W * 0.6, H * 0.12, "mdl-metal");
     M.rect(g, L + W * 0.75, T, W * 0.1, H * 0.4, "dev-dark");
+    M.screen(g, L + W * 0.06, yb - H * 0.42, W * 0.6, H * 0.3, `${mNum(d, "apparent_viscosity", 3)} mPa·s`, "");
+    M.led(g, L + W * 0.82, yb - H * 0.28, W * 0.04, mOn(d, "running"));
     return { x, y: yb - H * 0.62 };
   },
   tensiometer({ g, x, L, T, W, H, d, yb }) {                    // pendant-drop tensiometer: optical rail + camera + light + central needle
@@ -190,8 +207,10 @@ const FRONT = {
     M.window(g, L + W * 0.06, T + H * 0.08, W * 0.62, H * 0.62);
     const gx = L + W * 0.37, gy = T + H * 0.52, gr = Math.min(W * 0.26, H * 0.3);
     M.path(g, `M${gx - gr},${gy} A${gr},${gr} 0 0 1 ${gx + gr},${gy}`, "mdl-arc");           // goniometer circle
-    M.rect(g, gx - gr * 0.95, gy - gr * 0.55, gr * 0.4, gr * 0.22, "mdl-steel", { transform: `rotate(-25 ${gx - gr * 0.75} ${gy - gr * 0.45})` });
-    M.rect(g, gx + gr * 0.55, gy - gr * 0.55, gr * 0.4, gr * 0.22, "dev-dark", { transform: `rotate(25 ${gx + gr * 0.75} ${gy - gr * 0.45})` });
+    const scan = mOn(d, "running") ? { class: "mdl-swing", style: `transform-origin:${gx}px ${gy}px` } : {};
+    const arms = el("g", scan, g);                                                          // tube + detector swing about the sample while scanning
+    M.rect(arms, gx - gr * 0.95, gy - gr * 0.55, gr * 0.4, gr * 0.22, "mdl-steel", { transform: `rotate(-25 ${gx - gr * 0.75} ${gy - gr * 0.45})` });
+    M.rect(arms, gx + gr * 0.55, gy - gr * 0.55, gr * 0.4, gr * 0.22, "dev-dark", { transform: `rotate(25 ${gx + gr * 0.75} ${gy - gr * 0.45})` });
     M.rect(g, gx - gr * 0.15, gy - 6, gr * 0.3, 12, "mdl-metal");                          // sample stage
     M.rect(g, L + W * 0.74, T + H * 0.1, W * 0.2, H * 0.6, "dev-dark");
     M.screen(g, L + W * 0.76, T + H * 0.14, W * 0.16, H * 0.12, mOn(d, "running") ? "Scan" : "Ready", "XRD");
