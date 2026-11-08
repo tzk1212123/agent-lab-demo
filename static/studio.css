@@ -709,3 +709,5 @@ body.view-iso .iso-only { display: block; }
 .iso-front .contact-shadow { display: none; }
 .iso-top .top-dev { stroke: #224536; }
 .iso .arm.ghost { opacity: .3; }
+/* 2.5D see-through: no fade-in (redraws every poll would replay it), and see-through things let the pointer pass to what is behind */
+#world .iso .xray-block, #world .iso .layer-block { transition: none; pointer-events: none; }
