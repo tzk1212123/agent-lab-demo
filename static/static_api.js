@@ -6,7 +6,8 @@
 "use strict";
 
 window.STATIC_DEMO = true;
-const SD = { cache: {}, run: null };
+const SD = { cache: {}, run: null, bench: null };   // bench: recorded organizing states of the loaded experiment
+const ASM_MAX_S = 5;                                  // one-off assembly plays back within ~5 s (fast-forwarded, as on the live server)
 const NOT_ONLINE = "Not available in the online demo (it replays recorded runs). Run the full app locally for this.";
 
 async function sdLoad(file) {
@@ -19,12 +20,20 @@ async function sdLoad(file) {
   return SD.cache[file];
 }
 
+function sdRate(r) { return r.base < r.tAsm ? Math.max(r.speed, (r.tAsm - r.base) / ASM_MAX_S) : r.speed; }
 function sdNow() {                                    // current simulated time of the replay
   const r = SD.run;
   if (r.status !== "running") return r.simT;
-  return Math.min(r.tEnd, r.base + (performance.now() - r.real0) / 1000 * r.speed);
+  const now = performance.now();
+  let t = r.base + (now - r.real0) / 1000 * r.rate;
+  if (r.base < r.tAsm && t >= r.tAsm) {                // assembly finished: continue from there at the chosen speed
+    const realAtAsm = r.real0 + (r.tAsm - r.base) / r.rate * 1000;
+    r.base = r.tAsm; r.real0 = realAtAsm; r.rate = r.speed;
+    t = r.base + (now - r.real0) / 1000 * r.rate;
+  }
+  return Math.min(r.tEnd, t);
 }
-function sdRebase(simT) { const r = SD.run; r.base = simT; r.real0 = performance.now(); }
+function sdRebase(simT) { const r = SD.run; r.base = simT; r.real0 = performance.now(); r.rate = sdRate(r); }
 
 async function sdLiveStart(body) {
   const robot = body.robot ? "robot" : "human";
@@ -32,7 +41,9 @@ async function sdLiveStart(body) {
   const asm = rec.assembly_steps || 0;                // one-off assembly is fast-forwarded, as on the live server
   const firstRun = rec.events.find((e) => e.type === "plan_step" && e.index > asm);
   const tEnd = rec.frames.length ? rec.frames[rec.frames.length - 1].t : 0;
-  SD.run = { rec, speed: +body.speed || 1, status: "running", base: firstRun ? firstRun.t : 0, real0: performance.now(), tEnd, simT: 0 };
+  SD.run = { rec, speed: +body.speed || 1, status: "running", base: 0, real0: performance.now(), tEnd, simT: 0,
+             tAsm: asm && firstRun ? firstRun.t : 0 };
+  SD.run.rate = sdRate(SD.run);
   return { ok: true, log: "recorded run" };
 }
 
@@ -60,10 +71,24 @@ window.STATIC_API = async function (path, body) {
     case "/api/intro": return sdLoad("intro.json");
     case "/api/runs": return { runs: [] };
     case "/api/sandbox/catalog": return sdLoad("catalog.json");
-    case "/api/sandbox/new": return sdLoad(`sandbox_${["gear_inventory", "gear_all"].includes(body?.sid) ? body.sid : "studio"}.json`);
+    case "/api/sandbox/new": {
+      if (body?.experiment && (body.sid || "studio") === "studio") {   // Start: load the experiment's recorded organizing states
+        SD.bench = { states: await sdLoad(`organize/${body.experiment}.json`), key: "init" };
+        return { ok: true, sid: "studio", ...SD.bench.states.init };
+      }
+      return sdLoad(`sandbox_${["gear_inventory", "gear_all"].includes(body?.sid) ? body.sid : "studio"}.json`);
+    }
     case "/api/sandbox/state": {
-      const st = await sdLoad(`sandbox_${["gear_inventory", "gear_all"].includes(q.get("sid")) ? q.get("sid") : "studio"}.json`);
+      const sid = q.get("sid");
+      const st = sid === "studio" && SD.bench ? SD.bench.states[SD.bench.key]
+        : await sdLoad(`sandbox_${["gear_inventory", "gear_all"].includes(sid) ? sid : "studio"}.json`);
       return +q.get("since") ? { ...st, events: [] } : st;
+    }
+    case "/api/sandbox/stow_all": case "/api/sandbox/move_device": case "/api/sandbox/move_slot": {
+      const key = p.endsWith("stow_all") ? "stow" : p.endsWith("move_device") ? `dev:${body?.id}` : `slot:${body?.slot}`;
+      if (!SD.bench || !SD.bench.states[key]) throw new Error(NOT_ONLINE);
+      SD.bench.key = key;                             // replay the next recorded bench state
+      return { ok: true };
     }
     case "/api/sandbox/pause": case "/api/sandbox/play": return { ok: true };
     case "/api/device_info": return sdLoad(`device_info/${q.get("profile")}.json`);
@@ -72,7 +97,7 @@ window.STATIC_API = async function (path, body) {
       return sdLoad(`prepare/${body.ref}.json`);
     case "/api/live/start": return sdLiveStart(body || {});
     case "/api/live/poll": return sdLivePoll(q);
-    case "/api/live/speed": if (SD.run) { sdRebase(sdNow()); SD.run.speed = +body.speed || 1; } return { ok: true };
+    case "/api/live/speed": if (SD.run) { const t = sdNow(); SD.run.speed = +body.speed || 1; sdRebase(t); } return { ok: true };
     case "/api/live/skip": {                          // Enter: jump to the start of the next plan step
       if (SD.run && SD.run.status === "running") {
         const t = sdNow(), nx = SD.run.rec.events.find((e) => e.type === "plan_step" && e.t > t + 1e-6);

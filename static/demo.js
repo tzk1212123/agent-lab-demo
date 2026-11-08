@@ -82,21 +82,17 @@ async function demoStart(opts = {}) {             // opts: {robot, speed} (from 
     $("demoPhase").textContent = "Tidying bench: stowing unused equipment, placing what's needed…";
     // 1) load experiment → 2) clear the bench, place devices one by one by docking relations
     const L = prep.layout;
-    if (!window.STATIC_DEMO) {                       // online demo (GitHub Pages): no live bench; the recorded run already has the organized layout
-      await api("/api/sandbox/new", { sid: "studio", experiment: prep.experiment, humans: 1 });
-      SB.sid = "studio"; await startSandbox();
-      await sbApi("stow_all", { keep_slots: L.container_slots, bench: L.bench }); await sbPoll();   // first stow everything on the equipment table
-    }
+    await api("/api/sandbox/new", { sid: "studio", experiment: prep.experiment, humans: 1 });   // (online demo: recorded bench states)
+    SB.sid = "studio"; await startSandbox();
+    await sbApi("stow_all", { keep_slots: L.container_slots, bench: L.bench }); await sbPoll();   // first stow everything on the equipment table
     if (typeof gearTransfer === "function") {      // transition: highlight needed items on the equipment page → fly to the bench
       $("demoPhase").textContent = `Fetching ${L.used_devices.length} needed devices from the equipment table…`;
       await gearTransfer(L.used_devices, prep.title);
     }
-    if (!window.STATIC_DEMO) {
-      $("demoPhase").textContent = "Placing and assembling on the bench by docking relations…";
-      await demoOrganize(prep, 550);
-      $("demoPhase").textContent = `Bench ready: ${Object.keys(L.device_slots).length} devices and ${L.container_slots.length} container slots on the bench, ${L.stored.length} devices on the shelf. Starting…`;
-      await sleep(900);
-    }
+    $("demoPhase").textContent = "Placing and assembling on the bench by docking relations…";
+    await demoOrganize(prep, 550);
+    $("demoPhase").textContent = `Bench ready: ${Object.keys(L.device_slots).length} devices and ${L.container_slots.length} container slots on the bench, ${L.stored.length} devices on the shelf. Starting…`;
+    await sleep(900);
     // 3) run (same layout)
     const speed = opts.speed ?? $("selSpeed").value, layout = { ...L };
     setView("front");                                    // experiment start: switch to front view to watch
