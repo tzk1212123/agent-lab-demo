@@ -95,7 +95,7 @@ async function demoStart(opts = {}) {             // opts: {robot, speed} (from 
     await sleep(900);
     // 3) run (same layout)
     const speed = opts.speed ?? $("selSpeed").value, layout = { ...L };
-    setView("front");                                    // experiment start: switch to front view to watch
+    setView("iso");                                      // experiment start: switch to the 2.5D view to watch
     const extra = { plan: prep.plan, assembly_steps: prep.assembly_steps || 0 };   // one-off assembly moved to the front (fast-forwarded before the run)
     if (c.kind === "paper") await api("/api/paper/run", { exp_id: c.ref, layout, robot: robot ? "xarm6_standard" : "", speed, planning_s: c.planning_s || "", ...extra });
     else await api("/api/live/start", { experiment: c.ref, planner: "fixed", layout, robot: robot ? "xarm6_standard" : "", speed, humans: 1, ...extra });
