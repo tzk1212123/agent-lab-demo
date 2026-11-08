@@ -185,6 +185,7 @@ function drawDevice(g, id, d, x, yb) {
   const grp = el("g", { "data-d": id }, g);
   const L = x - W / 2, T = yb - H;
   const cat = d.category;
+  if (S.devBoxes && !g.closest?.(".stored-dev")) S.devBoxes[id] = { L, T, W, H, x, yb };   // instrument outline for the animation layer
   el("ellipse", { cx: x, cy: yb, rx: W * 0.56, ry: Math.max(5, Math.min(18, W * 0.05)), class: "contact-shadow" }, grp);   // contact shadow on the bench top
   const holder = { x, y: T };        // container holder point (bottom centre)
   if (typeof FRONT !== "undefined" && FRONT[cat]) {
@@ -424,7 +425,7 @@ function renderFront(svg, f, st) {
   drawArms(g, f, "front", b);
   drawAvatars(g, f, pos, holders, 0, LEG);
   spreadLabels(g);
-  S.geo = { mode: "front", pos, holders, b };            // used by the animation layer
+  S.geo = { mode: "front", pos, holders, b, boxes: S.devBoxes };   // used by the animation layer
   return { x: b.x0 - 1190, y: backY - 700, w: b.x1 - b.x0 + 1330, h: LEG + 740 - backY };
 }
 
@@ -534,6 +535,7 @@ function renderTop(svg, f, st) {
     const [W0, D0] = d.dims_mm, rot = d.rotation || 0;
     const [W, D] = rot % 180 === 90 ? [D0, W0] : [W0, D0];          // footprint by orientation (for text and reading bars)
     dpos[id] = { x: s.x_mm, y: s.y_mm };
+    S.devBoxes[id] = { L: s.x_mm - W / 2, T: s.y_mm - D / 2, W, H: D, x: s.x_mm, yb: s.y_mm + D / 2 };   // for the animation layer
     const grp = el("g", { "data-d": id }, g);
     const mg = el("g", rot ? { transform: `rotate(${rot} ${s.x_mm} ${s.y_mm})` } : {}, grp);   // the model itself rotates with orientation
     el("rect", { x: s.x_mm - W0 / 2, y: s.y_mm - D0 / 2, width: W0, height: D0, rx: 14, class: "top-dev" }, mg);
@@ -608,7 +610,7 @@ function renderTop(svg, f, st) {
     else el("path", { d: pd, class: "cable" }, g);
   }
   drawArms(g, f, "top", b);
-  S.geo = { mode: "top", b, holders: dpos,
+  S.geo = { mode: "top", b, holders: dpos, boxes: S.devBoxes,
             pos: Object.fromEntries(Object.entries(cpos).map(([k, p]) => {
               const r = Math.min(8 + 2.6 * Math.sqrt(f.containers[k].capacity_mL), p.rmax ?? Infinity);
               return [k, { x: p.x, y: p.y, w: r, h: 2 * r, top: p.y }];
@@ -719,6 +721,7 @@ function render() {
     for (const [cid, c] of Object.entries(f.containers)) if (c.location === Object.keys(f.devices).find((k) => f.devices[k] === d)) S.stirring.add(cid);
   const svg = $("world");
   svg.innerHTML = ""; clipSeq = 0; S.bubbleAnchor = null;
+  S.devBoxes = {};
   if (typeof pumpPrepare === "function") { pumpPrepare(f); PUMP.tw = []; }
   if (typeof gearCapture === "function") gearCapture(f);
   document.body.classList.toggle("view-prep", S.view === "table");   // the prep library is a plain page: zoom / pan / drawer buttons are hidden

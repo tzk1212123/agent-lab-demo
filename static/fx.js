@@ -155,7 +155,9 @@ function fxSignature(f) {
   const a = f.activity;
   const devs = Object.entries(f.devices).map(([id, d]) => [id, d.category,
     Math.round(best(d, "plate_temperature") ?? 0) > 35, (best(d, "running") ?? 0) > 0, (best(d, "pumping") ?? 0) > 0, d.anim?.phase ?? "",
-    (best(d, "power") ?? 0) > 0, d.connections?.out ?? ""]);
+    (best(d, "power") ?? 0) > 0, d.connections?.out ?? "", d.connections?.probe ?? "", d.connections?.cell ?? "",
+    (best(d, "speed") ?? 0) > 50, (best(d, "current") ?? 0) > 0, Math.round(best(d, "wavelength") ?? 0), (best(d, "pressure") ?? 1) > 1.5,
+    Math.round((best(d, "temperature") ?? 22) / 40)]);
   const hot = Object.entries(f.containers).map(([k, c]) => [k, c.location, Math.round(c.truth?.temperature_C ?? 22) > 60,
     (c.attachments || []).join(",")]);
   return JSON.stringify([S.view, S.operator, a && [a.skill, a.params, a.executor], devs, hot, (f.executors || []).map((e) => e.id),
@@ -316,4 +318,5 @@ function renderFx(f) {
       for (let i = 0; i < 2; i++) fxEl("circle", { cx: p.x, cy: p.top - 60, r: 3, class: "fx-fall", fill: "#bfe3f2", style: `animation-delay:${i * 0.6}s` }, g);
     }
   }
+  if (typeof fxMore === "function") fxMore({ g, f, TOP, pos, holders, a, P, top, color, arcPath, movers });   // fxmore.js
 }

@@ -637,3 +637,38 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 7px; border-radius: 6
 .mdl-beam { filter: drop-shadow(0 0 6px currentColor); animation: mdlPulse 1.2s ease-in-out infinite alternate; }
 .mdl-beam-line { stroke-width: 4; stroke-linecap: round; opacity: .85; animation: mdlPulse 1.2s ease-in-out infinite alternate; }
 @keyframes mdlPulse { from { opacity: .55; } to { opacity: 1; } }
+
+/* fxmore.js: more operation / instrument animations */
+.fx-stirbar { fill: #f6f6ee; stroke: #9aa39a; stroke-width: 1.5; }
+.fx-probe { stroke: #dfe6de; stroke-width: 6; stroke-linecap: round; }
+.fx-haze { fill: none; stroke: #ffcf8a; stroke-width: 3; stroke-linecap: round; opacity: 0; animation: fxhaze 1.6s ease-out infinite; }
+@keyframes fxhaze { 0% { opacity: 0; transform: translateY(6px); } 40% { opacity: .7; } 100% { opacity: 0; transform: translateY(-26px); } }
+.fx-fog { fill: #e8f6ff; stroke: none; opacity: 0; animation: fxfog 2.6s ease-out infinite; }
+@keyframes fxfog { 0% { opacity: 0; transform: translate(0, 0); } 30% { opacity: .45; } 100% { opacity: 0; transform: translate(18px, 22px); } }
+.fx-lens { fill: none; stroke: #ffe9b0; stroke-width: 5; stroke-linecap: round; animation: fxglow 1.4s ease-in-out infinite; }
+.fx-meniscus { stroke: #ffe9b0; stroke-width: 3; stroke-dasharray: 6 5; }
+.fx-balloon { fill: #ff8fa3; fill-opacity: .7; stroke: #fff; stroke-width: 2; transform-box: fill-box; transform-origin: center bottom; animation: fxinflate 1.8s ease-out infinite; }
+@keyframes fxinflate { 0% { transform: scale(.3); } 70%, 100% { transform: scale(1); } }
+.fx-gas-out { fill: #c9d6e3; opacity: 0; animation: fxbubble 1.2s ease-out infinite; }
+.fx-gas-in { fill: #8fd18a; opacity: 0; animation: fxsink 1.2s ease-in infinite; }
+@keyframes fxsink { 0% { opacity: .9; transform: translateY(-30px); } 100% { opacity: 0; transform: translateY(0); } }
+.fx-tlc { fill: #f4f1e6; stroke: #9aa39a; stroke-width: 2; }
+.fx-spot { fill: #7a5cc0; animation: fxglow 1s ease-in-out infinite; }
+.fx-swirl { fill: none; stroke: #ffffff; stroke-width: 2.5; stroke-dasharray: 10 8; opacity: .75; transform-box: fill-box; transform-origin: center; animation: spin .9s linear infinite; }
+.fx-beam { stroke-width: 5; stroke-linecap: round; opacity: .85; filter: drop-shadow(0 0 4px currentColor); animation: mdlPulse 1s ease-in-out infinite alternate; }
+.fx-sense { fill: #8fd18a; opacity: .8; transform-box: fill-box; transform-origin: center; animation: fxping 1.2s ease-out infinite; }
+.fx-settle { fill: #8fd18a; opacity: .6; animation: fxglow .8s ease-in-out infinite; }
+.fx-trace { fill: none; stroke: #8fd18a; stroke-width: 2.5; stroke-dasharray: 400; stroke-dashoffset: 400; animation: fxdraw 2.4s linear infinite; }
+@keyframes fxdraw { to { stroke-dashoffset: 0; } }
+.fx-cool { stroke: #9fd0e6; }
+.fx-ray { stroke: #6aa8ff; stroke-width: 4; stroke-linecap: round; stroke-dasharray: 12 8; opacity: .8; animation: fxflow .5s linear infinite; }
+.fx-scan { fill: #ffe9b0; opacity: .85; }
+.fx-flash { fill: #ffffff; opacity: 0; animation: fxflash 1.6s ease-out infinite; }
+@keyframes fxflash { 0%, 70% { opacity: 0; } 75% { opacity: .8; } 100% { opacity: 0; } }
+.fx-slow { animation-duration: 1.8s; }
+.fx-gauge { fill: #f4f1e6; stroke: #5b6b5e; stroke-width: 3; }
+.fx-needle { stroke: #d94a3a; stroke-width: 3; stroke-linecap: round; }
+.fx-cannula { fill: none; stroke: #dfe6de; stroke-width: 3; stroke-dasharray: 4 6; animation: fxflow .7s linear infinite; }
+.fx-hot { stroke: #ffb347; }
+.fx-air { fill: #e8f6ff; }
+.fx-tool { font-size: 30px; text-anchor: middle; animation: fxglow 1s ease-in-out infinite; }
