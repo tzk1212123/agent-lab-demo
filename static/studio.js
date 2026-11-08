@@ -95,6 +95,19 @@ function bottle(w, h, neck, capH) {
     inner: `M${-w / 2 + 3},${-sh + 14} L${-w / 2 + 3},-3 L${w / 2 - 3},-3 L${w / 2 - 3},${-sh + 14} Z`, top: -h };
 }
 
+// polyline through pts with rounded corners (radius r, clipped to half of each segment)
+function roundedPath(pts, r) {
+  let d = `M${pts[0][0]},${pts[0][1]}`;
+  for (let i = 1; i < pts.length - 1; i++) {
+    const [x0, y0] = pts[i - 1], [x1, y1] = pts[i], [x2, y2] = pts[i + 1];
+    const l1 = Math.hypot(x1 - x0, y1 - y0), l2 = Math.hypot(x2 - x1, y2 - y1);
+    if (l1 < 0.5 || l2 < 0.5) continue;
+    const q = Math.min(r, l1 / 2, l2 / 2);
+    d += ` L${x1 - (x1 - x0) / l1 * q},${y1 - (y1 - y0) / l1 * q} Q${x1},${y1} ${x1 + (x2 - x1) / l2 * q},${y1 + (y2 - y1) / l2 * q}`;
+  }
+  const z = pts[pts.length - 1];
+  return d + ` L${z[0]},${z[1]}`;
+}
 // ================================================================ drawing: containers
 let clipSeq = 0;
 function liquidColor(c) {
@@ -410,19 +423,36 @@ function renderFront(svg, f, st) {
     if (it.kind === "dev") holders[it.id] = drawDevice(g, it.id, it.d, it.x, baseY(b, it.y));
     else drawCon(it.id, it.c);
   }
-  // connections: probes and tubing
+  // connections: probes and tubing. Tubing runs like on a real bench: off the pump port to the side of the pump, down to the
+  // bench top, along it, up the outside of the vessel and over the rim; several tubes on one vessel bundle side by side.
+  const tubeK = {}, tubeSide = (cid, side) => { const k = `${cid}${side}`; tubeK[k] = (tubeK[k] ?? -1) + 1; return tubeK[k]; };
+  S.tubeEnds = {};
   for (const [id, d] of Object.entries(f.devices)) {
     const h = holders[id]; if (!h) continue;
     for (const [port, cid] of Object.entries(d.connections)) {
       const p = pos[cid]; if (!p) continue;
       if (d.category === "syringe_pump") {
-        const a = h.ports?.[port] || h.port || { x: h.x, y: h.y };
-        pumpTube(g, id, d, port, `M${a.x},${a.y} C${a.x - 80},${a.y - 160} ${p.x + 40},${p.top - 160} ${p.x + (port === "in" ? -6 : 6)},${p.top + 8}`);
+        const a = h.ports?.[port] || h.port || { x: h.x, y: h.y }, bx = S.devBoxes[id];
+        const side = a.x < p.x ? -1 : 1, k = tubeSide(cid, side);         // vessel side the tube comes up on
+        const left = bx ? a.x < bx.x : side > 0;                            // leave the pump body on the side nearest its port
+        const exitX = bx ? (left ? bx.L - 6 - k * 5 : bx.L + bx.W + 6 + k * 5) : a.x;
+        const lane = Math.max(bx ? bx.yb : a.y, p.y) + 8 + k * 6;          // lying on the bench in front of both
+        const rx = p.x + side * (p.w / 2 + 6 + k * 6), ry = p.top - 16 - k * 5;
+        const mx = p.x + side * Math.min(p.w * 0.3, 4 + k * 6), my = p.top + Math.min(p.h * 0.25, 14);
+        const tubeD = roundedPath([[a.x, a.y], [exitX, a.y], [exitX, lane], [rx, lane], [rx, ry]], 10)
+          + ` Q${rx},${ry - 14} ${(rx + mx) / 2},${ry - 12} T${mx},${my}`;
+        if (port === "out") S.tubeEnds[id] = { x: mx, y: my };
+        const src = d.connections.in && f.containers[d.connections.in];
+        pumpTube(g, id, d, port, tubeD, src ? liquidColor(src) : pumpColor(d.anim));
       } else {
-        const a = h.port || { x: h.x, y: h.y - 20 };
+        const a = h.port || { x: h.x, y: h.y - 20 }, bx = S.devBoxes[id];
         const tipY = p.y - Math.min(p.h * 0.35, 40);
         const px = p.x + (port === "pt1000" ? 10 : -10);
-        el("path", { d: `M${a.x},${a.y} C${a.x},${a.y - 120} ${px},${p.top - 140} ${px},${p.top - 40}`, class: "cable" }, g);
+        // probe cable: off the meter, along the bench, up a clamp next to the vessel and down into it
+        const side = a.x < p.x ? -1 : 1, k = tubeSide(cid, side);
+        const exitX = bx ? (a.x < bx.x ? bx.L - 6 : bx.L + bx.W + 6) : a.x;
+        const lane = Math.max(bx ? bx.yb : a.y, p.y) + 8 + k * 6, rx = p.x + side * (p.w / 2 + 10 + k * 6);
+        el("path", { d: roundedPath([[a.x, a.y], [exitX, a.y], [exitX, lane], [rx, lane], [rx, p.top - 60], [px, p.top - 60], [px, p.top - 40]], 12), class: "cable" }, g);
         el("line", { x1: px, y1: p.top - 40, x2: px, y2: tipY, class: "probe" }, g);
         el("circle", { cx: px, cy: tipY, r: 4, class: "probe-tip" }, g);
       }
@@ -608,12 +638,21 @@ function renderTop(svg, f, st) {
     grp.addEventListener("mousemove", (e) => tip(e, vesselTip(cid, c)));
     grp.addEventListener("mouseleave", hideTip);
   }
+  const topK = {};
   for (const [id, d] of Object.entries(f.devices)) for (const [port, cid] of Object.entries(d.connections)) {
     const a0 = dpos[id], q = cpos[cid]; if (!a0 || !q) continue;
     const a = a0.ports?.[port] || a0;
+    if (d.category === "syringe_pump") {                                // top view: tubing lies flat on the bench with soft corners
+      const src = d.connections.in && f.containers[d.connections.in];
+      const k = (topK[cid] = (topK[cid] ?? -1) + 1);
+      const pts = Math.abs(q.y - a.y) > 120 ? [[a.x, a.y], [a.x, q.y], [q.x, q.y]]           // vessel in another row: an L
+        : (() => { const lane = Math.max(a.y, q.y) + 110 + k * 12, ex = q.x + (k - 1.5) * 10;   // same row: out in front of the
+            return [[a.x, a.y], [a.x, lane], [ex, lane], [ex, q.y]]; })();                         // instruments, then into the vessel
+      pumpTube(g, id, d, port, roundedPath(pts, 40), src ? liquidColor(src) : pumpColor(d.anim));
+      continue;
+    }
     const pd = `M${a.x},${a.y} Q${(a.x + q.x) / 2},${Math.min(a.y, q.y) - 90} ${q.x},${q.y}`;
-    if (d.category === "syringe_pump") pumpTube(g, id, d, port, pd);
-    else el("path", { d: pd, class: "cable" }, g);
+    el("path", { d: pd, class: "cable" }, g);
   }
   drawArms(g, f, "top", b);
   S.geo = { mode: "top", b, holders: dpos, boxes: S.devBoxes,

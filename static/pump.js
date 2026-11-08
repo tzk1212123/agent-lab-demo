@@ -219,10 +219,12 @@ function pumpTop(g, id, d, s) {
 }
 
 // ---------------------------------------------------------------- tubing (grows on connect, retracts on disconnect, liquid flow)
-function pumpTube(g, id, d, port, pathD) {
+function pumpTube(g, id, d, port, pathD, liquid) {
   const k = `${id}.${port}`, a = d.anim || {};
   (PUMP.lastPath = PUMP.lastPath || {})[k] = pathD;
-  const tube = el("path", { d: pathD, class: "tube" }, g);
+  // FEP / PTFE tubing is see-through: the tube shows the colour of the liquid in it; idle tubes are fainter
+  const busy = a.phase === "push" || a.phase === "draw";
+  const tube = el("path", { d: pathD, class: `tube ${busy ? "busy" : ""}`, style: liquid ? `stroke:${liquid}` : "" }, g);
   const born = now() - (PUMP.connAt[k] ?? -1e9);
   if (born < 800) {                                   // just connected: tube grows out of the pump port
     const len = tube.getTotalLength?.() || 600;

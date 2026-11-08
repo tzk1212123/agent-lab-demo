@@ -286,7 +286,7 @@ function renderFx(f) {
       const t = top(d.connections.out);
       for (let i = 0; i < 3; i++) {
         const dr = TOP ? fxEl("circle", { cx: t.x, cy: t.y, r: 10, class: "fx-ripple", style: `animation-delay:${i * 0.33}s` }, g)
-          : fxEl("circle", { cx: t.x + 6, cy: t.y - 40, r: 4, class: "fx-fall", fill: color(d.connections.in), style: `animation-delay:${i * 0.33}s` }, g);
+          : fxEl("circle", { cx: S.tubeEnds?.[id]?.x ?? t.x + 6, cy: (S.tubeEnds?.[id]?.y ?? t.y - 40) + 4, r: 4, class: "fx-fall", fill: color(d.connections.in), style: `animation-delay:${i * 0.33}s` }, g);
         void dr;
       }
     }
