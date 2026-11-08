@@ -16,6 +16,11 @@ function fxMore(ctx) {
   const E = fxEl;
   const here = (id) => Object.entries(f.containers).filter(([, c]) => c.location === id).map(([k]) => k);
   const on = (d, k) => (best(d, k) ?? 0) > 0;
+  const lastCmd = (id) => {                                              // the device's most recent command up to this frame
+    let c = null;
+    for (const e of S.events || []) { if (e.seq >= (f.event_seq ?? Infinity)) break; if (e.type === "command" && e.device === id) c = e.command; }
+    return c;
+  };
 
   // ---------------------------------------------------------------- operations in progress
   if (a) {
@@ -105,11 +110,16 @@ function fxMore(ctx) {
     const cat = d.category, onIt = here(id);
     const busy = on(d, "running");
 
-    if ((cat === "hotplate_stirrer" || cat === "pressure_reactor") && (best(d, "speed") ?? 0) > 50) {   // stirring vortex in the liquid
+    if ((cat === "hotplate_stirrer" || cat === "pressure_reactor") && (best(d, "speed") ?? 0) > 50) {   // stirring: vortex dip + swirling particles
+      const rpm = best(d, "speed");
       for (const cid of onIt) {
         const p = pos[cid]; if (!p) continue;
-        const cy = TOP ? p.y : p.y - Math.min(p.h * 0.35, 40);
-        E("ellipse", { cx: p.x, cy, rx: Math.max(10, p.w * 0.32), ry: TOP ? Math.max(10, p.w * 0.32) : 6, class: "fx-swirl" }, g);
+        if (TOP) { E("ellipse", { cx: p.x, cy: p.y, rx: Math.max(10, p.w * 0.32), ry: Math.max(10, p.w * 0.32), class: "fx-swirl" }, g); continue; }
+        const ys = p.level ?? (p.y - p.h * 0.4), half = p.w * 0.36, dip = Math.min(p.h * 0.25, 6 + rpm / 60);
+        if (p.y - ys < 6) continue;                                       // (almost) empty: nothing to stir
+        E("path", { d: `M${p.x - half},${ys} Q${p.x - half * 0.3},${ys} ${p.x},${ys + dip} Q${p.x + half * 0.3},${ys} ${p.x + half},${ys}`, class: "fx-vortex" }, g);
+        const orbit = `M${p.x - half * 0.7},${ys + (p.y - ys) * 0.5} a${half * 0.7},${Math.max(4, (p.y - ys) * 0.12)} 0 1,0 ${half * 1.4},0 a${half * 0.7},${Math.max(4, (p.y - ys) * 0.12)} 0 1,0 ${-half * 1.4},0`;
+        ctx.movers(g, orbit, 3, "fx-speck", { r: 2.5, fill: "#ffffff" }, Math.max(0.4, 60 / rpm * 1.2));
       }
     }
     if (cat === "spectrophotometer" && onIt.length) {                    // light beam through the cuvette at the set wavelength
@@ -171,10 +181,23 @@ function fxMore(ctx) {
       const p = onIt.map((k) => pos[k]).find(Boolean) || { x: b.x, y: b.T };
       E("circle", { cx: p.x, cy: (TOP ? p.y : p.y - 20), r: 30, class: "fx-flash" }, g);
     }
-    if (cat === "foam_analyzer" && busy) {                               // bubbles rising through the column
+    if (cat === "foam_analyzer" && busy && lastCmd(id) === "record") {  // gas off, camera filming the foam collapse
+      E("circle", { cx: b.L + b.W * 0.9, cy: TOP ? b.T + 20 : b.T + b.H * 0.25, r: 8, class: "fx-rec" }, g);
+      E("circle", { cx: b.x, cy: TOP ? b.T + b.H / 2 : b.T + b.H * 0.5, r: 28, class: "fx-flash" }, g);
+    } else if (cat === "foam_analyzer" && busy) {                        // gas stone at the bottom: bubble streams rising through the liquid
       const p = onIt.map((k) => pos[k]).find(Boolean);
-      const x = p ? p.x : b.x, y = p ? p.y : b.T + b.H * 0.6;
-      for (let i = 0; i < 6; i++) E("circle", { cx: x - 15 + (i % 3) * 15, cy: y + (TOP ? 0 : 20), r: 4 + (i % 2) * 2, class: "fx-bubble", style: `animation-delay:${i * 0.22}s` }, g);
+      if (p && !TOP) {
+        const ys = p.level ?? (p.y - p.h * 0.3);
+        for (let i = 0; i < 9; i++) {
+          const bx = p.x - p.w * 0.25 + (i % 3) * p.w * 0.25;
+          const bub = E("circle", { cx: bx, cy: p.y - 8, r: 3 + (i % 3), class: "fx-rise" }, g);
+          E("animate", { attributeName: "cy", values: `${p.y - 8};${ys}`, dur: `${1.1 + (i % 4) * 0.2}s`, begin: `${(i * 0.17).toFixed(2)}s`, repeatCount: "indefinite" }, bub);
+        }
+        E("ellipse", { cx: p.x, cy: ys - 4, rx: p.w * 0.42, ry: 6, class: "fx-froth" }, g);
+      } else {
+        const x = p ? p.x : b.x, y = p ? p.y : b.T + b.H * 0.6;
+        for (let i = 0; i < 6; i++) E("circle", { cx: x - 15 + (i % 3) * 15, cy: y, r: 4 + (i % 2) * 2, class: "fx-bubble", style: `animation-delay:${i * 0.22}s` }, g);
+      }
     }
     if (cat === "liquid_handler" && busy) {                              // pipette tip shuttling between wells
       const y = TOP ? b.T + b.H * 0.4 : b.T + b.H * 0.4;

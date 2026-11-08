@@ -58,6 +58,12 @@ const FRONT = {
     M.rect(g, L + W * 0.8, yb - H * 0.9, W * 0.18, H * 0.5, "mdl-lamp");                    // backlight
     M.rect(g, x - W * 0.2, yb - H * 0.42, W * 0.4, H * 0.12, "mdl-metal");                  // sample stage
     const ang = best(d, "contact_angle");
+    if (typeof ang === "number") {                                                          // sessile drop drawn at the measured angle (spherical cap)
+      const ys = yb - H * 0.42, a = W * 0.09, th = Math.max(5, Math.min(175, ang)) * Math.PI / 180;
+      const R = a / Math.sin(th);
+      M.path(g, `M${x - a},${ys} A${R},${R} 0 ${th > Math.PI / 2 ? 1 : 0} 1 ${x + a},${ys} Z`, "mdl-drop");
+      M.line(g, x - a * 1.8, ys, x + a * 1.8, ys, "mdl-baseline");
+    }
     if (typeof ang === "number") M.text(g, x, T - 6, `θ ${fmt(ang, 3)}°`, Math.max(9, W * 0.1), "mdl-t");
     return { x, y: yb - H * 0.42 };
   },
@@ -190,6 +196,12 @@ const FRONT = {
     M.rect(g, x - W * 0.03, T, W * 0.06, H * 0.35, "mdl-steel");                            // syringe
     M.line(g, x, T + H * 0.35, x, T + H * 0.5, "mdl-tip");
     const st = best(d, "surface_tension");
+    if (typeof st === "number" || mOn(d, "running") || best(d, "sample")) {    // pendant drop: lower surface tension → longer, slimmer drop
+      const y0 = T + H * 0.5, r = Math.max(6, H * 0.055), e = Math.max(0, Math.min(1, (72 - (typeof st === "number" ? st : 60)) / 40));
+      const yb2 = y0 + r * (1.3 + 0.9 * e), rw = r * (1 - 0.25 * e);
+      M.path(g, `M${x - 2},${y0} C${x - 2},${y0 + r * 0.5} ${x - rw},${y0 + r * 0.7} ${x - rw},${yb2 - rw * 0.2} A${rw},${rw} 0 0 0 ${x + rw},${yb2 - rw * 0.2} C${x + rw},${y0 + r * 0.7} ${x + 2},${y0 + r * 0.5} ${x + 2},${y0} Z`, "mdl-drop");
+      if (mOn(d, "running")) M.rect(g, L + W * 0.8, yb - H * 0.45, W * 0.16, H * 0.3, "mdl-lamp mdl-lit");   // backlight on while imaging
+    }
     if (typeof st === "number") M.text(g, x, T - 8, `γ ${fmt(st, 3)} mN/m`, Math.max(9, W * 0.04), "mdl-t");
     return { x, y: yb - H * 0.12 };
   },

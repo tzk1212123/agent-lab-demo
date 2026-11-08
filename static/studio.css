@@ -672,3 +672,15 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 7px; border-radius: 6
 .fx-hot { stroke: #ffb347; }
 .fx-air { fill: #e8f6ff; }
 .fx-tool { font-size: 30px; text-anchor: middle; animation: fxglow 1s ease-in-out infinite; }
+.mdl-shake-ride { animation: mdlShakeRide .18s ease-in-out infinite alternate; }
+@keyframes mdlShakeRide { from { translate: -3px 0; } to { translate: 3px 0; } }
+.fx-vortex { fill: none; stroke: #ffffff; stroke-width: 3; opacity: .8; animation: fxvortex .6s ease-in-out infinite alternate; }
+@keyframes fxvortex { from { opacity: .55; } to { opacity: .95; } }
+.fx-speck { opacity: .8; }
+.fx-rise { fill: rgba(255, 255, 255, .25); stroke: #ffffff; stroke-width: 1.2; }
+.fx-froth { fill: #f4f8f6; opacity: .75; animation: fxglow 1.2s ease-in-out infinite; }
+.mdl-drop { fill: #cfe9f7; fill-opacity: .9; stroke: #ffffff; stroke-width: 1.5; }
+.mdl-baseline { stroke: #ffe9b0; stroke-width: 1.5; stroke-dasharray: 4 3; }
+.mdl-lit { fill: #fff6c8; filter: drop-shadow(0 0 8px #fff3a0); }
+.fx-rec { fill: #ff4a3d; animation: fxglow .9s ease-in-out infinite; }
+#world .arm.busy { opacity: .72; }   /* working arm stays visible but does not hide the vessels it works on */

@@ -160,7 +160,9 @@ function fxSignature(f) {
     Math.round((best(d, "temperature") ?? 22) / 40)]);
   const hot = Object.entries(f.containers).map(([k, c]) => [k, c.location, Math.round(c.truth?.temperature_C ?? 22) > 60,
     (c.attachments || []).join(",")]);
-  return JSON.stringify([S.view, S.operator, a && [a.skill, a.params, a.executor], devs, hot, (f.executors || []).map((e) => e.id),
+  let nCmd = 0;                                       // a new device command (e.g. sparge → record) can change the animation
+  for (const e of S.events || []) { if (e.seq >= (f.event_seq ?? Infinity)) break; if (e.type === "command") nCmd++; }
+  return JSON.stringify([S.view, S.operator, a && [a.skill, a.params, a.executor], devs, hot, (f.executors || []).map((e) => e.id), nCmd,
     S.vb && [S.vb.x, S.vb.y, S.vb.w, S.vb.h]]);
 }
 

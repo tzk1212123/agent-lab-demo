@@ -158,12 +158,15 @@ function drawVessel(g, cid, c, x, y, opts = {}) {
   if (S.activeIds.has(cid)) el("rect", { x: -shp.w / 2 - 10, y: -H - 14, width: shp.w + 20, height: H + 22, rx: 10, class: "active-ring" }, grp);
   if ((c.truth?.temperature_C ?? 22) > 45 && vol > 0) for (let i = -1; i <= 1; i++)
     el("path", { d: `M${i * 12},${-H - 10} q5,-10 0,-20 q-5,-10 0,-20`, class: "heat", style: `animation-delay:${i * 0.25}s` }, grp);
-  el("text", { x: 0, y: 30, class: "lbl" }, grp, cid);
-  el("text", { x: 0, y: 52, class: "lbl-sub" }, grp, `${fmt(vol, 3)} mL`);
+  if (!(c.type || "").startsWith("well")) {               // single wells of a plate: no per-well labels (they pile up)
+    const ly = opts.labelAbove ? -H - 52 : 30;            // vessel sitting on an instrument: label above it, not over the instrument's screen
+    el("text", { x: 0, y: ly, class: "lbl" }, grp, cid);
+    el("text", { x: 0, y: ly + 22, class: "lbl-sub" }, grp, `${fmt(vol, 3)} mL`);
+  }
   grp.addEventListener("mousemove", (e) => tip(e, vesselTip(cid, c)));
   grp.addEventListener("mouseenter", () => typeof frontXray === "function" && S.view === "front" && frontXray(cid));
   grp.addEventListener("mouseleave", () => { hideTip(); if (typeof frontXray === "function") frontXray(null); });
-  return { x, y, top: y - H, w: shp.w, h: H };
+  return { x, y, top: y - H, w: shp.w, h: H, level: y - H * frac };   // level: liquid surface (for vortex / bubbles)
 }
 function vesselTip(cid, c) {
   let h = `<b>${esc(cid)}</b> · ${esc(c.type)}<br>${esc(c.label)}<br>Ledger volume ${fmt(c.ledger_mL)} mL (estimated)`;
@@ -395,7 +398,10 @@ function renderFront(svg, f, st) {
       const r = Math.min(60, 10 + 3.2 * Math.sqrt(c.capacity_mL));           // container on the bench top: contact shadow
       el("ellipse", { cx: x, cy: y, rx: r, ry: Math.max(4, r * 0.18), class: "contact-shadow", "data-c": cid }, g);
     } else return;
-    pos[cid] = drawVessel(g, cid, c, x, y);
+    pos[cid] = drawVessel(g, cid, c, x, y, { labelAbove: !!holders[c.location] });
+    const hd = f.devices[c.location];                   // flasks / plates ride along on a running shaker
+    if (hd && ["incubator_shaker", "heater_shaker"].includes(hd.category) && (best(hd, "speed") ?? 0) > 20)
+      g.querySelector(`[data-c="${cid}"]`)?.classList.add("mdl-shake-ride");
     const h = holders[c.location];
     if (h && h.inBath) el("rect", { x: h.inBath.x, y: h.inBath.y, width: h.inBath.w, height: h.inBath.h, rx: 6, fill: "#9fd0e6", "fill-opacity": 0.35 }, g);
   };
