@@ -146,6 +146,11 @@ function targetPoint(f, loc) {
   }
   if (geo.holders[loc]) return { x: geo.holders[loc].x, y: geo.holders[loc].y };
   const st = S.static, s = st?.slots?.[loc];
+  if (geo.mode === "iso") {
+    if (s) return geo.proj(s.x_mm, s.y_mm, 0);
+    if (loc === "storage") return geo.proj(geo.b.x0 - 300, geo.b.y0, 0);
+    return null;
+  }
   if (s) return { x: s.x_mm, y: baseY(geo.b, s.y_mm) };
   if (loc === "storage") return { x: geo.b.x0 - 360, y: -(geo.b.y1 - geo.b.y0) * DEPTH + 60 };
   return null;

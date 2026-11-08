@@ -41,6 +41,7 @@ function groupBox(f, ids) {
       const s = st.slots[d.slot]; if (!s) continue;
       const [W, D, H] = d.dims_mm;
       if (geo.mode === "top") add(s.x_mm - W / 2, s.y_mm - D / 2, s.x_mm + W / 2, s.y_mm + D / 2 + 40);
+      else if (geo.mode === "iso") { const q = geo.boxes[id]; if (q) add(q.L, q.T - 60, q.L + q.W, q.yb + 50); }
       else { const yb = baseY(geo.b, s.y_mm); add(s.x_mm - W / 2, yb - Math.min(H, 950) - 60, s.x_mm + W / 2, yb + 60); }
       continue;
     }
@@ -144,6 +145,7 @@ function frontLayers(f, st) {
 
 // Hover see-through: in front view, hovering an instrument / container makes things in front of it translucent
 function frontXray(id) {
+  if (S.view === "iso" && typeof isoXray === "function") return isoXray(id);
   for (const n of $("world").querySelectorAll(".xray-block")) n.classList.remove("xray-block");
   if (!id || S.view !== "front") return;
   const f = S.frames[S.idx], st = S.static; if (!f || !st) return;

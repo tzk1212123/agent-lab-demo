@@ -692,3 +692,20 @@ kbd { display: inline-block; min-width: 22px; padding: 1px 7px; border-radius: 6
 .fx-blink { fill: #b9f0a0; opacity: .5; }
 .fx-head { fill: #4f6b5c; stroke: #dfe6de; stroke-width: 2; }
 .fx-tip { stroke: #f4f1e6; stroke-width: 4; stroke-linecap: round; }
+
+/* 2.5D view (iso.js) */
+.iso-only { display: none; }
+body.view-iso .iso-only { display: block; }
+.iso-bench-top { fill: #c9d4b3; stroke: #a9b693; stroke-width: 2; }
+.iso-bench-side { fill: #93a07f; stroke: #7f8c6d; stroke-width: 1.5; }
+.iso-leg { stroke: #6f7c60; stroke-width: 26; stroke-linecap: round; }
+.iso-slot { fill: none; stroke: #9aa784; stroke-width: 2; stroke-dasharray: 8 6; }
+.iso-face { fill: #2f5a45; stroke: #224536; stroke-width: 1.5; }
+.iso-face.front { fill: #3b6d55; }
+.iso-face-inner { fill: #24473a; stroke: #1c3a2e; stroke-width: 1.5; }
+.iso-face-glass { fill: #bfe3d3; fill-opacity: .1; stroke: #2f5a45; stroke-width: 6; stroke-linejoin: round; }
+.iso-roof { fill: #bfe3d3; fill-opacity: .05; stroke: #2f5a45; stroke-width: 6; stroke-linejoin: round; }
+.iso-front.glassy .dev-body { fill-opacity: .2; }
+.iso-front .contact-shadow { display: none; }
+.iso-top .top-dev { stroke: #224536; }
+.iso .arm.ghost { opacity: .3; }

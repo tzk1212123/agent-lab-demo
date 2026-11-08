@@ -177,7 +177,7 @@ function drawVessel(g, cid, c, x, y, opts = {}) {
     el("text", { x: 0, y: ly + 22, class: "lbl-sub" }, grp, `${fmt(vol, 3)} mL`);
   }
   grp.addEventListener("mousemove", (e) => tip(e, vesselTip(cid, c)));
-  grp.addEventListener("mouseenter", () => typeof frontXray === "function" && S.view === "front" && frontXray(cid));
+  grp.addEventListener("mouseenter", () => typeof frontXray === "function" && (S.view === "front" || S.view === "iso") && frontXray(cid));
   grp.addEventListener("mouseleave", () => { hideTip(); if (typeof frontXray === "function") frontXray(null); });
   return { x, y, top: y - H, w: shp.w, h: H, level: y - H * frac };   // level: liquid surface (for vortex / bubbles)
 }
@@ -773,9 +773,11 @@ function render() {
   $("tableView").hidden = S.view !== "table"; svg.style.display = S.view === "table" ? "none" : "block";
   if (S.view === "table") { if (typeof renderGear === "function") renderGear(f); else renderTable(f); if ($("agentConsole")) $("agentConsole").hidden = true; }   // equipment page: all equipment on one big table
   else {
-    const box = S.view === "front" ? renderFront(svg, f, st) : renderTop(svg, f, st);
+    document.body.classList.toggle("view-iso", S.view === "iso");
+    const box = S.view === "front" ? renderFront(svg, f, st) : S.view === "iso" ? renderIso(svg, f, st) : renderTop(svg, f, st);
     if (typeof pumpGhosts === "function") pumpGhosts(svg);
     if (S.view === "front" && typeof frontLayers === "function") frontLayers(f, st);
+    if (S.view === "iso" && typeof isoLayers === "function") isoLayers(f);
     if (typeof demoTick === "function") demoTick(f);
     if (typeof renderConsole === "function") renderConsole(f);
     if (typeof autoFocus === "function") autoFocus(f);
@@ -886,7 +888,7 @@ function setView(v) {
 for (const b of document.querySelectorAll(".tabs button")) b.onclick = () => setView(b.dataset.view);
 document.addEventListener("keydown", (e) => {
   if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
-  if (e.key === "1") setView("front"); else if (e.key === "2") setView("top"); else if (e.key === "3") setView("table");
+  if (e.key === "1") setView("front"); else if (e.key === "2") setView("top"); else if (e.key === "3") setView("table"); else if (e.key === "4") setView("iso");
   else if (e.key === "f" || e.key === "F") $("fit").click();
   else if (e.key === "+" || e.key === "=") zoomBy(1 / 1.25); else if (e.key === "-") zoomBy(1.25);
   else if (e.key === " ") { e.preventDefault(); togglePlay(); }
