@@ -176,7 +176,6 @@ function drawVessel(g, cid, c, x, y, opts = {}) {
     el("text", { x: 0, y: ly, class: "lbl" }, grp, cid);
     el("text", { x: 0, y: ly + 22, class: "lbl-sub" }, grp, `${fmt(vol, 3)} mL`);
   }
-  grp.addEventListener("mousemove", (e) => tip(e, vesselTip(cid, c)));
   grp.addEventListener("mouseenter", () => { if (S.view === "iso") isoHover(cid); else if (typeof frontXray === "function" && S.view === "front") frontXray(cid); });
   grp.addEventListener("mouseleave", () => { hideTip(); if (S.view === "iso") isoHover(null); else if (typeof frontXray === "function") frontXray(null); });
   return { x, y, top: y - H, w: shp.w, h: H, level: y - H * frac };   // level: liquid surface (for vortex / bubbles)
@@ -333,7 +332,7 @@ function drawDevice(g, id, d, x, yb) {
     holder.port = { x: L + W - 14, y: T - 140 };
   }
   el("text", { x, y: yb + 30, class: "lbl" }, grp, id);                 // model goes in the hover tooltip; front view labels only the id
-  grp.addEventListener("mousemove", (e) => { tip(e, deviceTip(id, d)); S.hoverDev = id; });
+  grp.addEventListener("mousemove", () => { S.hoverDev = id; });
   grp.addEventListener("mouseenter", () => typeof frontXray === "function" && frontXray(id));
   grp.addEventListener("mouseleave", () => { hideTip(); if (S.hoverDev === id) S.hoverDev = null; if (typeof frontXray === "function") frontXray(null); });
   return holder;
@@ -556,7 +555,6 @@ function renderTop(svg, f, st) {
     else if (d.category === "syringe_pump") pumpTop(mg, id, d, { x_mm: W / 2, y_mm: D / 2 });
     el("text", { x: cx, y: cy + D * k / 2 + 24, class: "lbl" }, grp, id);
     grp.addEventListener("pointerdown", (e) => typeof startMove === "function" && startMove(e, "device", id));
-    grp.addEventListener("mousemove", (e) => tip(e, `${deviceTip(id, d)}<br><i>In the store: press and drag onto the bench to use</i>`));
     grp.addEventListener("mouseleave", hideTip);
   });
   if (S.mode === "sandbox") {                       // bench grid (100 mm cells, heavy line every 5)
@@ -605,7 +603,6 @@ function renderTop(svg, f, st) {
       el("rect", { x: s.x_mm - W / 2 + 6, y: s.y_mm + D / 2 - fs - 14, width: W - 12, height: fs + 10, rx: 6, class: "top-read-bg" }, grp);
       el("text", { x: s.x_mm, y: s.y_mm + D / 2 - 11, class: "top-read", "font-size": fs }, grp, rd);
     }
-    grp.addEventListener("mousemove", (e) => tip(e, deviceTip(id, d)));
     grp.addEventListener("mouseleave", hideTip);
   }
   const store = Object.keys(f.containers).filter((k) => f.containers[k].location === "storage");
@@ -635,8 +632,7 @@ function renderTop(svg, f, st) {
     if (p.rmax) el("text", { x: p.x, y: p.y + r + Math.max(9, r * 0.9), class: "lbl", "font-size": Math.max(9, Math.min(20, p.rmax * 0.75)) }, grp, cid);
     else el("text", { x: p.x, y: p.y + r + 22, class: "lbl" }, grp, cid);
     grp.addEventListener("pointerdown", (e) => typeof startMove === "function" && startMove(e, "container", cid));
-    grp.addEventListener("mousemove", (e) => tip(e, vesselTip(cid, c)));
-    grp.addEventListener("mouseleave", hideTip);
+      grp.addEventListener("mouseleave", hideTip);
   }
   const topK = {};
   for (const [id, d] of Object.entries(f.devices)) for (const [port, cid] of Object.entries(d.connections)) {

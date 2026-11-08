@@ -73,6 +73,12 @@ document.addEventListener("dblclick", (e) => {
     }).catch((err) => { $("diBody").innerHTML = `<div class="pc-bad">${esc(err.message)}</div>`; });
     return;
   }
+  const v = e.target.closest?.("#world [data-c]");                 // vessel: details next to the pointer until it leaves the vessel
+  if (v) {
+    const cid = v.getAttribute("data-c"), c = S.frames[S.idx]?.containers?.[cid];
+    if (c && typeof vesselTip === "function") { e.preventDefault(); tip(e, vesselTip(cid, c)); }
+    return;
+  }
   const g = e.target.closest?.("[data-d], [data-gear]");
   if (!g) return;
   e.preventDefault();

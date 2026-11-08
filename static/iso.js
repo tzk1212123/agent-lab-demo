@@ -222,7 +222,7 @@ function isoDevice(g, P, id, d, cx, cy, f) {
   el("text", { x: (L + Math.max(...xs)) / 2, y: lb + 30, class: "lbl" }, grp, id);
   const rd = typeof topReading === "function" ? topReading(d) : null;
   if (rd && !frontShown) el("text", { x: (L + Math.max(...xs)) / 2, y: lb + 52, class: "lbl-sub" }, grp, rd);
-  grp.addEventListener("mousemove", (e) => { tip(e, deviceTip(id, d)); S.hoverDev = id; });
+  grp.addEventListener("mousemove", () => { S.hoverDev = id; });
   grp.addEventListener("mouseenter", () => isoHover(id));
   grp.addEventListener("mouseleave", () => { hideTip(); if (S.hoverDev === id) S.hoverDev = null; isoHover(null); });
   void f;
