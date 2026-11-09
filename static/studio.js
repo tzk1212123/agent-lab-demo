@@ -867,9 +867,15 @@ $("world").addEventListener("wheel", (e) => {
   S.vb = { x: p.x - (p.x - S.vb.x) * k, y: p.y - (p.y - S.vb.y) * k, w: S.vb.w * k, h: S.vb.h * k }; applyVB(); placeBubble();
 }, { passive: false });
 let drag = null;
-$("world").addEventListener("pointerdown", (e) => { if (!S.vb) return; drag = { p: svgPoint(e), vb: { ...S.vb } }; $("world").classList.add("dragging"); $("world").setPointerCapture(e.pointerId); });
+// pan: the pointer is captured only once it has really moved, so a click / double-click still reaches the instrument under it
+$("world").addEventListener("pointerdown", (e) => { if (!S.vb) return; drag = { p: svgPoint(e), vb: { ...S.vb }, x: e.clientX, y: e.clientY, id: e.pointerId, on: false }; });
 $("world").addEventListener("pointermove", (e) => {
-  if (!drag) return; const p = svgPoint(e);
+  if (!drag) return;
+  if (!drag.on) {
+    if (Math.hypot(e.clientX - drag.x, e.clientY - drag.y) < 4) return;
+    drag.on = true; $("world").classList.add("dragging"); try { $("world").setPointerCapture(drag.id); } catch { /* pointer already released */ }
+  }
+  const p = svgPoint(e);
   S.vb.x -= p.x - drag.p.x; S.vb.y -= p.y - drag.p.y; applyVB(); placeBubble();
 });
 $("world").addEventListener("pointerup", () => { drag = null; $("world").classList.remove("dragging"); });
