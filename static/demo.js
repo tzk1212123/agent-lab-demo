@@ -231,6 +231,7 @@ function demoFinish(p) {
       <tr><td>LLM reads paper, writes plan</td><td>${plan.llm_s != null ? min(plan.llm_s) : "—"}</td></tr>
       <tr class="hl"><td>Planning time saved</td><td>${min(plan.saved_s)}</td></tr>` : ""}
     </table>
+    ${demoHousekeeping(sm.housekeeping)}
     <div class="muted demo-assume">${(sm.assumptions || []).map(esc).join("<br>")}</div>`;
   $("demoPhase").textContent = "Demo finished";
   renderProgress(S.frames[S.idx], DEMO.current);
@@ -258,3 +259,13 @@ $("demoHandle").onclick = toggleDemo;
 $("demoEdge").onclick = toggleDemo;
 document.body.classList.add("demo-hidden");               // left demo panel collapsed by default; ← opens it (mirrors → for the right panel)
 demoInit().catch((e) => toast(`Demo panel init failed: ${e.message}`, true));
+
+// end-of-run housekeeping (demo.housekeeping): reagents used per stock, and what was left on / in the liquid
+function demoHousekeeping(h) {
+  if (!h) return "";
+  const rows = (h.reagents || []).slice(0, 6).map((r) => `<tr><td>${esc(r.label)}</td><td>${fmt(r.used_mL, 3)} mL used · ${fmt(r.left_mL, 3)} mL left${r.low ? ` <span class="pc-bad">low</span>` : ""}</td></tr>`).join("");
+  const todo = [...(h.left_on || []), ...(h.probes_in || [])];
+  return `<h4>Reagents used</h4><table class="demo-tbl">${rows || `<tr><td class="muted">none</td><td></td></tr>`}</table>
+    <h4>Clean-up</h4>${todo.length ? `<div class="pc-bad">${esc(h.verdict)}</div><div class="muted">${todo.map(esc).join("<br>")}</div>`
+      : `<div class="pc-good">✓ Tidy: heaters and stirrers off, probes out</div>`}`;
+}
