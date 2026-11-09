@@ -202,6 +202,7 @@ function renderProgress(f, cur) {
     <div class="pp-row"><span>${DEMO.done ? "Done" : `${p.assembly_steps && cur <= p.assembly_steps ? "Assembling · " : (p.assembly_steps ? "Running · " : "")}Step ${cur || 0} / ${n}`}</span><span>${pct}%</span></div>
     ${!DEMO.done && st ? `<div class="pp-cur">▶ ${esc(stepText(st.step, p.labels))}</div>` : ""}
     ${!DEMO.done && nx ? `<div class="pp-next">Next: ${esc(stepText(nx.step, p.labels))}</div>` : ""}
+    ${p.assembly_steps && cur <= p.assembly_steps && !DEMO.done ? "" : briefHtml(p, cur, f)}
     <div class="pp-row muted"><span>Elapsed ${fmtT(Math.max(0, f.t - DEMO.t0))}</span><span>${esc($("selSpeed")?.value || "1")}× speed</span></div>
     ${DEMO.done || DEMO.skipHinted ? "" : `<div class="pp-row muted"><span>Enter skips this step</span></div>`}`;
 }
@@ -268,4 +269,43 @@ function demoHousekeeping(h) {
   return `<h4>Reagents used</h4><table class="demo-tbl">${rows || `<tr><td class="muted">none</td><td></td></tr>`}</table>
     <h4>Clean-up</h4>${todo.length ? `<div class="pc-bad">${esc(h.verdict)}</div><div class="muted">${todo.map(esc).join("<br>")}</div>`
       : `<div class="pc-good">✓ Tidy: heaters and stirrers off, probes out</div>`}`;
+}
+
+// what the run is for (plan "brief"), shown in the progress panel once assembly is done: open loop = inputs → outputs;
+// closed loop = the stages, the current one marked, each with its latest outputs (records / the last decision)
+function briefHtml(p, cur, f) {
+  const b = p.plan?.brief;
+  if (!b) return "";
+  const live = S.mode === "live" && S.idx === S.frames.length - 1;
+  const evs = S.events.filter((e) => live || e.seq < (f.event_seq ?? Infinity));
+  const rec = {}, decisions = [];
+  for (const e of evs) {
+    if (e.type === "record") rec[e.label] = e.data;
+    else if (e.type === "overseer" && e.role === "decide" && e.phase === "done") decisions.push(e);
+  }
+  const val = (label) => {
+    if (label === "decision") {
+      const d = decisions[decisions.length - 1];
+      if (!d) return "";
+      const v = Object.entries(d.vars || {}).filter(([, x]) => +x > 0).map(([k, x]) => `${k} ${+(+x).toFixed(3)}`).join(", ");
+      return `round ${decisions.length}: ${d.stop ? "stop — a human should check" : d.done ? "target reached" : v || "no change"}`;
+    }
+    const q = Object.values(rec[label] || {})[0];
+    return q && q.value != null ? `${label} ${typeof q.value === "number" ? +q.value.toFixed(4) : q.value}` : "";
+  };
+  let h = `<div class="pp-brief"><div>${esc(b.summary || "")}</div>`;
+  if (!(b.stages || []).length) {
+    h += (b.inputs || []).length ? `<div class="pp-io"><i>In</i>${b.inputs.map(esc).join("; ")}</div>` : "";
+    h += (b.outputs || []).length ? `<div class="pp-io"><i>Out</i>${b.outputs.map(esc).join("; ")}</div>` : "";
+    return h + "</div>";
+  }
+  const idx = Object.fromEntries(p.steps.map((s) => [s.id, s.index]));
+  const starts = b.stages.map((s) => idx[s.from] ?? Infinity);
+  let now = -1;                                        // current stage: the latest stage start at or before the current step
+  starts.forEach((i, k) => { if (i <= cur && (now < 0 || i > starts[now])) now = k; });   // (a loop jumping back lands on its own stage)
+  h += `<ol class="pp-stages">${b.stages.map((s, k) => {
+    const out = (s.show || []).map(val).filter(Boolean).join(" · ");
+    return `<li class="${k === now && !DEMO.done ? "cur" : ""}"><b>${esc(s.title)}</b> — ${esc(s.does || "")}${s.adjust ? ` <span class="muted">(adjusts: ${esc(s.adjust)})</span>` : ""}${out ? `<div class="pp-out">${esc(out)}</div>` : ""}</li>`;
+  }).join("")}</ol>`;
+  return h + "</div>";
 }

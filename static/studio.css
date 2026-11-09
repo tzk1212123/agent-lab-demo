@@ -732,3 +732,12 @@ body.view-iso .iso-only { display: block; }
 .prep-chip b.tagpair { display: inline-flex; flex: 0 0 auto; border-radius: 999px; overflow: hidden; font-weight: 500; }
 .prep-chip b.tagpair i { border-radius: 0; padding: 0 7px; }
 .prep-chip b.tagpair i + i { border-left: 1px solid rgba(0, 0, 0, .25); }
+/* plan brief in the progress panel */
+.pp-brief { margin: 6px 0 4px; padding-top: 6px; border-top: 1px solid rgba(255, 255, 255, .12); font-size: 12px; line-height: 1.4; }
+.pp-io i { font-style: normal; display: inline-block; min-width: 30px; color: var(--accent); }
+.pp-stages { margin: 4px 0 0; padding-left: 18px; }
+.pp-stages li { margin: 2px 0; opacity: .7; }
+.pp-stages li.cur { opacity: 1; color: #ffe9b0; }
+.pp-out { font-family: ui-monospace, monospace; font-size: 11px; color: #b9e08f; }
+.iso-warn { fill: #ffb4a8; font-size: 26px; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: #3a1410; stroke-width: 5px; animation: fxBlinkWarn 1s steps(2) infinite; }
+@keyframes fxBlinkWarn { 50% { opacity: .45; } }

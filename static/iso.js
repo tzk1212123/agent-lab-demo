@@ -127,6 +127,7 @@ function renderIso(svg, f, st) {
 
   // ---------------------------------------------------------------- tubing and probe cables, routed on the bench in 3D
   isoConnections(g, P, f, holderW, holders, world, pos);
+  isoFaultMarks(g, f);
   spreadLabels(g);
   S.geo = { mode: "iso", pos, holders, b, boxes: S.devBoxes, proj, world };
   // fit: the equipment on the bench (not the whole, often much larger bench), with room for labels and people
@@ -353,3 +354,25 @@ document.addEventListener("keydown", (e) => {
 });
 document.getElementById("isoLeft")?.addEventListener("click", () => isoTurn(-1));
 document.getElementById("isoRight")?.addEventListener("click", () => isoTurn(1));
+
+// fault marks: only when monitoring found something (reading out of range / frozen, a step that failed): a ⚠ over the
+// instrument involved, for 5 sim minutes; nothing is drawn while things are normal
+function isoFaultMarks(g, f) {
+  const live = S.mode === "live" && S.idx === S.frames.length - 1;
+  const hits = {};
+  for (const e of S.events || []) {
+    if (!live && e.seq >= (f.event_seq ?? Infinity)) break;
+    if (e.type !== "overseer" || e.role !== "monitor" || e.phase !== "done" || f.t - e.t > 300) continue;
+    if (e.ok !== false && !e.action) continue;
+    const text = `${e.detail || ""} ${(e.problems || []).join(" ")}`;
+    for (const id of Object.keys(S.devBoxes)) {                  // the device id as a whole word (optrode_1, not optrode_10)
+      const k = text.indexOf(id), after = text[k + id.length] || " ", before = k > 0 ? text[k - 1] : " ";
+      if (k >= 0 && !/[A-Za-z0-9_]/.test(after) && !/[A-Za-z0-9_]/.test(before)) hits[id] = e.action || "check";
+    }
+  }
+  for (const [id, act] of Object.entries(hits)) {
+    const b = S.devBoxes[id];
+    const t = el("text", { x: b.x, y: b.T - 24, class: "iso-warn" }, g, `⚠ ${act === "stop" ? "stopped" : act === "retry" ? "retrying" : "check"}`);
+    void t;
+  }
+}
