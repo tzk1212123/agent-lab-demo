@@ -30,7 +30,7 @@ async function api(path, body) {
 const S = {
   view: "table", mode: "idle", operator: true, static: null, frames: [], events: [], idx: 0,   // operator: operator view only (shows simulated truth)
   frameNext: 0, eventNext: 0, status: "idle", score: null, follow: true, playing: false, poll: null,
-  vb: null, fitted: { front: false, top: false },
+  vb: null, fitted: { iso: false, top: false },
 };
 const frame = () => S.frames[S.idx];
 
@@ -176,8 +176,8 @@ function drawVessel(g, cid, c, x, y, opts = {}) {
     el("text", { x: 0, y: ly, class: "lbl" }, grp, cid);
     el("text", { x: 0, y: ly + 22, class: "lbl-sub" }, grp, `${fmt(vol, 3)} mL`);
   }
-  grp.addEventListener("mouseenter", () => { if (S.view === "iso") isoHover(cid); else if (typeof frontXray === "function" && S.view === "front") frontXray(cid); });
-  grp.addEventListener("mouseleave", () => { hideTip(); if (S.view === "iso") isoHover(null); else if (typeof frontXray === "function") frontXray(null); });
+  grp.addEventListener("mouseenter", () => { if (S.view === "iso") isoHover(cid); });
+  grp.addEventListener("mouseleave", () => { hideTip(); if (S.view === "iso") isoHover(null); });
   return { x, y, top: y - H, w: shp.w, h: H, level: y - H * frac };   // level: liquid surface (for vortex / bubbles)
 }
 function vesselTip(cid, c) {
@@ -333,8 +333,7 @@ function drawDevice(g, id, d, x, yb) {
   }
   el("text", { x, y: yb + 30, class: "lbl" }, grp, id);                 // model goes in the hover tooltip; front view labels only the id
   grp.addEventListener("mousemove", () => { S.hoverDev = id; });
-  grp.addEventListener("mouseenter", () => typeof frontXray === "function" && frontXray(id));
-  grp.addEventListener("mouseleave", () => { hideTip(); if (S.hoverDev === id) S.hoverDev = null; if (typeof frontXray === "function") frontXray(null); });
+  grp.addEventListener("mouseleave", () => { hideTip(); if (S.hoverDev === id) S.hoverDev = null; });
   return holder;
 }
 function deviceTip(id, d) {
@@ -342,129 +341,7 @@ function deviceTip(id, d) {
   return `<b>${esc(id)}</b> · ${esc(d.model)} (${esc(d.mode)})<br>${rows}`;
 }
 
-// ================================================================ front view
-function renderFront(svg, f, st) {
-  const b = benchBounds(st);
-  const backY = -(b.y1 - b.y0) * DEPTH;
-  const g = el("g", {}, svg);
-  // grid and height ruler
-  for (let z = 0; z <= 800; z += 100) {
-    el("line", { x1: b.x0 - 700, x2: b.x1 + 80, y1: backY - z, y2: backY - z, class: "grid" }, g);
-    el("text", { x: b.x1 + 90, y: backY - z + 5, class: "zlabel" }, g, `Z ${z} mm`);
-  }
-  // store (cabinet on the left)
-  const cx0 = b.x0 - 1150, cx1 = b.x0 - 90;
-  el("rect", { x: cx0, y: backY - 640, width: cx1 - cx0, height: LEG + 640 - backY, rx: 14, class: "shelf" }, g);
-  el("text", { x: cx0 + 20, y: backY - 600, class: "area-t" }, g, "Store");
-  const shelves = [LEG - 20, backY + 60, backY - 260].map((y) => y);
-  for (const y of shelves) el("rect", { x: cx0 + 10, y: y, width: cx1 - cx0 - 20, height: 10, class: "shelf-board" }, g);
-  {                                                  // instruments in the store: shrunk on the top two shelves; press and drag onto the bench (top view)
-    const stored = storedDevices(f, st), perRow = Math.max(1, Math.ceil(stored.length / 2)), cellW = (cx1 - cx0 - 40) / perRow;
-    stored.forEach(([id, d], i) => {
-      const row = Math.floor(i / perRow), col = i % perRow, yb = shelves[row === 0 ? 2 : 1], [W, , H] = d.dims_mm;
-      const k = Math.min(1, (cellW - 20) / W, 250 / Math.min(H, 950)), x = cx0 + 20 + cellW * (col + 0.5);
-      const wrap = el("g", { transform: `translate(${x},${yb}) scale(${k}) translate(${-x},${-yb})`, class: "stored-dev" }, g);
-      drawDevice(wrap, id, d, x, yb);
-    });
-  }
-  // workbench
-  el("polygon", { points: `${b.x0},0 ${b.x1},0 ${b.x1 - 40},${backY} ${b.x0 + 40},${backY}`, class: "bench-top" }, g);
-  el("rect", { x: b.x0, y: 0, width: b.x1 - b.x0, height: 34, class: "bench-front" }, g);
-  for (const lx of [b.x0 + 40, b.x1 - 70]) el("rect", { x: lx, y: 34, width: 30, height: LEG - 34, class: "bench-leg" }, g);
-  el("text", { x: b.x0 + 60, y: backY + 30, class: "area-t" }, g, "Bench");
-
-  // draw objects back to front by depth
-  const items = [];
-  for (const [id, d] of Object.entries(f.devices)) {
-    const s = st.slots[d.slot];
-    if (s) {
-      const [w, dp, h] = d.dims_mm, rd = (d.rotation || 0) % 180 === 90;
-      items.push({ kind: "dev", id, d: rd ? { ...d, dims_mm: [dp, w, h] } : d, x: s.x_mm, y: s.y_mm });
-    }
-  }
-  const pos = {}; const holders = {};
-  // devices and containers interleaved by depth, back to front: front items cover back ones (containers drawn right after their device)
-  const storageOrder = Object.keys(f.containers).filter((k) => f.containers[k].location === "storage");
-  const perShelf = Math.max(3, Math.ceil(storageOrder.length / 3));
-  const onSlot = {};
-  const depthOf = (c) => st.slots[c.location]?.y_mm ?? ((st.slots[f.devices[c.location]?.slot]?.y_mm ?? 0) + 0.01);
-  const ordered = Object.entries(f.containers).sort((a, z) => depthOf(a[1]) - depthOf(z[1]));
-  for (const [cid, c] of ordered) if (c.location !== "storage") items.push({ kind: "con", id: cid, c, y: depthOf(c) });
-  items.sort((a, z) => a.y - z.y || (a.kind === "dev" ? -1 : 1));
-  const drawCon = (cid, c) => {
-    let x, y;
-    if (c.location === "storage") {
-      const i = storageOrder.indexOf(cid), row = Math.floor(i / perShelf), col = i % perShelf;
-      x = cx0 + 60 + col * ((cx1 - cx0 - 100) / Math.max(1, perShelf - 1)); y = shelves[row] ?? shelves[2];
-    } else if (holders[c.location]?.drawsVessel) {   // the device model draws this container itself (e.g. foam column)
-      pos[cid] = holders[c.location].vessel; return;
-    } else if (holders[c.location]) {
-      const h = holders[c.location]; x = h.x; y = h.y;
-      if (h.spread) {                                 // liquid-handler deck, shaker platform, plate carrier: containers spread out horizontally
-        const all = ordered.filter(([, cc]) => cc.location === c.location).map(([k]) => k), n = all.length, k = all.indexOf(cid);
-        x = h.x - h.spread / 2 + (k + 0.5) * h.spread / n;
-      }
-    } else if (st.slots[c.location]) {
-      const s = st.slots[c.location]; const k = (onSlot[c.location] = (onSlot[c.location] || 0) + 1) - 1;
-      x = s.x_mm + k * 50; y = baseY(b, s.y_mm);
-      const r = Math.min(60, 10 + 3.2 * Math.sqrt(c.capacity_mL));           // container on the bench top: contact shadow
-      el("ellipse", { cx: x, cy: y, rx: r, ry: Math.max(4, r * 0.18), class: "contact-shadow", "data-c": cid }, g);
-    } else return;
-    pos[cid] = drawVessel(g, cid, c, x, y, { labelAbove: !!holders[c.location] });
-    const hd = f.devices[c.location];                   // flasks / plates ride along on a running shaker
-    if (hd && ["incubator_shaker", "heater_shaker"].includes(hd.category) && (best(hd, "speed") ?? 0) > 20)
-      g.querySelector(`[data-c="${cid}"]`)?.classList.add("mdl-shake-ride");
-    const h = holders[c.location];
-    if (h && h.inBath) el("rect", { x: h.inBath.x, y: h.inBath.y, width: h.inBath.w, height: h.inBath.h, rx: 6, fill: "#9fd0e6", "fill-opacity": 0.35 }, g);
-  };
-  for (const cid of storageOrder) drawCon(cid, f.containers[cid]);       // store cabinet is furthest back
-  for (const it of items) {
-    if (it.kind === "dev") holders[it.id] = drawDevice(g, it.id, it.d, it.x, baseY(b, it.y));
-    else drawCon(it.id, it.c);
-  }
-  // connections: probes and tubing. Tubing runs like on a real bench: off the pump port to the side of the pump, down to the
-  // bench top, along it, up the outside of the vessel and over the rim; several tubes on one vessel bundle side by side.
-  const tubeK = {}, tubeSide = (cid, side) => { const k = `${cid}${side}`; tubeK[k] = (tubeK[k] ?? -1) + 1; return tubeK[k]; };
-  S.tubeEnds = {};
-  for (const [id, d] of Object.entries(f.devices)) {
-    const h = holders[id]; if (!h) continue;
-    for (const [port, cid] of Object.entries(d.connections)) {
-      const p = pos[cid]; if (!p) continue;
-      if (d.category === "syringe_pump") {
-        const a = h.ports?.[port] || h.port || { x: h.x, y: h.y }, bx = S.devBoxes[id];
-        const side = a.x < p.x ? -1 : 1, k = tubeSide(cid, side);         // vessel side the tube comes up on
-        const left = bx ? a.x < bx.x : side > 0;                            // leave the pump body on the side nearest its port
-        const exitX = bx ? (left ? bx.L - 6 - k * 5 : bx.L + bx.W + 6 + k * 5) : a.x;
-        const lane = Math.max(bx ? bx.yb : a.y, p.y) + 8 + k * 6;          // lying on the bench in front of both
-        const rx = p.x + side * (p.w / 2 + 6 + k * 6), ry = p.top - 16 - k * 5;
-        const mx = p.x + side * Math.min(p.w * 0.3, 4 + k * 6), my = p.top + Math.min(p.h * 0.25, 14);
-        const tubeD = roundedPath([[a.x, a.y], [exitX, a.y], [exitX, lane], [rx, lane], [rx, ry]], 10)
-          + ` Q${rx},${ry - 14} ${(rx + mx) / 2},${ry - 12} T${mx},${my}`;
-        if (port === "out") S.tubeEnds[id] = { x: mx, y: my };
-        const src = d.connections.in && f.containers[d.connections.in];
-        pumpTube(g, id, d, port, tubeD, src ? liquidColor(src) : pumpColor(d.anim));
-      } else {
-        const a = h.port || { x: h.x, y: h.y - 20 }, bx = S.devBoxes[id];
-        const tipY = p.y - Math.min(p.h * 0.35, 40);
-        const px = p.x + (port === "pt1000" ? 10 : -10);
-        // probe cable: off the meter, along the bench, up a clamp next to the vessel and down into it
-        const side = a.x < p.x ? -1 : 1, k = tubeSide(cid, side);
-        const exitX = bx ? (a.x < bx.x ? bx.L - 6 : bx.L + bx.W + 6) : a.x;
-        const lane = Math.max(bx ? bx.yb : a.y, p.y) + 8 + k * 6, rx = p.x + side * (p.w / 2 + 10 + k * 6);
-        el("path", { d: roundedPath([[a.x, a.y], [exitX, a.y], [exitX, lane], [rx, lane], [rx, p.top - 60], [px, p.top - 60], [px, p.top - 40]], 12), class: "cable" }, g);
-        el("line", { x1: px, y1: p.top - 40, x2: px, y2: tipY, class: "probe" }, g);
-        el("circle", { cx: px, cy: tipY, r: 4, class: "probe-tip" }, g);
-      }
-    }
-  }
-  drawArms(g, f, "front", b);
-  drawAvatars(g, f, pos, holders, 0, LEG);
-  spreadLabels(g);
-  S.geo = { mode: "front", pos, holders, b, boxes: S.devBoxes };   // used by the animation layer
-  return { x: b.x0 - 1190, y: backY - 700, w: b.x1 - b.x0 + 1330, h: LEG + 740 - backY };
-}
-
-// front-view label de-cluttering: when ids (and the small volume text below) overlap, later ones shift down a line, up to 3 times
+// label de-cluttering (2.5D view): when ids (and the small volume text below) overlap, later ones shift down a line, up to 3 times
 function spreadLabels(g) {                                  // detect overlap in screen coordinates (container text is in its own translated group; local coords don't compare)
   // first move labels to the top layer (same position) so back-row container names aren't covered by front-row instruments
   const layer = el("g", { class: "lbl-layer" }, g), gm = g.getCTM();
@@ -667,27 +544,14 @@ function drawArms(g, f, mode, b) {
   for (const e of f.executors.filter((x) => x.kind === "robot_arm" && x.base_xy_mm)) {
     const [bx, by] = e.base_xy_mm, [px, py, pz] = e.pos_mm || [bx, by, 300];
     const busy = act && act.executor === e.id;
-    const grp = el("g", { class: `arm ${busy ? "busy" : ""} ${mode === "front" && !busy ? "ghost" : ""}` }, g);   // front view: translucent when idle so it doesn't hide instruments
+    const grp = el("g", { class: `arm ${busy ? "busy" : ""}` }, g);
     if (mode === "top") {
       el("circle", { cx: bx, cy: by, r: e.reach_mm, class: "arm-reach" }, grp);
       el("line", { x1: bx, y1: by, x2: px, y2: py, class: "arm-link" }, grp);
       el("circle", { cx: bx, cy: by, r: 60, class: "arm-base" }, grp);
       el("circle", { cx: px, cy: py, r: 22, class: "arm-tool" }, grp);
       el("text", { x: bx, y: by + 95, class: "lbl" }, grp, e.id);
-    } else {
-      const X0 = bx, Y0 = baseY(b, by);                 // base on the bench top
-      const sh = { x: X0, y: Y0 - 260 };                 // shoulder
-      const tx = px, ty = baseY(b, py) - pz;             // end effector
-      const L = 380, dx = tx - sh.x, dy = ty - sh.y, d = Math.min(Math.hypot(dx, dy), 2 * L - 1);
-      const mx = (sh.x + tx) / 2, my = (sh.y + ty) / 2, h = Math.sqrt(Math.max(0, L * L - (d / 2) ** 2));
-      const el_x = mx + (dy / (d || 1)) * h * (dx >= 0 ? 1 : -1), el_y = my - Math.abs(dx / (d || 1)) * h;   // elbow points up
-      el("rect", { x: X0 - 70, y: Y0 - 40, width: 140, height: 40, rx: 10, class: "arm-base" }, grp);
-      el("rect", { x: X0 - 34, y: sh.y, width: 68, height: Y0 - 40 - sh.y, rx: 18, class: "arm-base" }, grp);
-      el("path", { d: `M${sh.x},${sh.y} L${el_x},${el_y} L${tx},${ty - 40}`, class: "arm-link" }, grp);
-      for (const [cx, cy, r] of [[sh.x, sh.y, 30], [el_x, el_y, 24], [tx, ty - 40, 18]]) el("circle", { cx, cy, r, class: "arm-joint" }, grp);
-      el("path", { d: `M${tx - 22},${ty - 22} L${tx - 22},${ty + 6} M${tx + 22},${ty - 22} L${tx + 22},${ty + 6}`, class: "arm-finger" }, grp);
-      el("text", { x: X0, y: Y0 + 30, class: "lbl" }, grp, e.id);
-      // speech bubble above the arm removed too
+
     }
   }
 }
@@ -701,35 +565,6 @@ function targetOf(act, ...maps) {
   }
   return null;
 }
-const lastAvatarX = {};
-function drawAvatars(g, f, pos, holders, benchY, floorY) {
-  const act = f.activity;
-  const humans = f.executors.filter((e) => /human/.test(e.kind));
-  humans.forEach((e, i) => {
-    let x = lastAvatarX[e.id] ?? (benchBounds(S.static).x0 + 120 + i * 140);
-    const busy = act && act.executor === e.id;
-    if (busy) {
-      const tgt = targetOf(act, pos, holders);
-      if (tgt) x = tgt.x - 70;
-    }
-    lastAvatarX[e.id] = x;
-    const a = el("g", { class: `avatar ${busy ? "walk" : ""}` }, g);
-    S.avShown = S.avShown || {};                     // walk smoothly: tween from the last shown position to the target (~1.2 m/s, continuous across redraws)
-    const from = S.avShown[e.id] ?? x, dist = Math.abs(x - from);
-    if (typeof tween === "function" && dist > 1) tween(e.id, S.avShown, x, Math.max(300, Math.min(2500, dist / 1.2)), (v) => a.setAttribute("transform", `translate(${v},${floorY})`));
-    else { S.avShown[e.id] = x; a.setAttribute("transform", `translate(${x},${floorY})`); }
-    el("rect", { x: -34, y: -330, width: 68, height: 200, rx: 26, class: "body" }, a);
-    el("rect", { x: -26, y: -140, width: 20, height: 140, rx: 8, fill: "#3d5a4a" }, a);
-    el("rect", { x: 6, y: -140, width: 20, height: 140, rx: 8, fill: "#3d5a4a" }, a);
-    el("circle", { cx: 0, cy: -372, r: 40, class: "head" }, a);
-    el("rect", { x: -30, y: -386, width: 60, height: 16, rx: 7, class: "goggles" }, a);
-    el("path", { d: busy ? "M30,-300 Q90,-330 110,-370" : "M30,-300 Q50,-240 40,-190", stroke: "#f3f3ea", "stroke-width": 16, fill: "none", "stroke-linecap": "round" }, a);
-    el("circle", { cx: busy ? 110 : 40, cy: busy ? -370 : -190, r: 10, class: "glove" }, a);
-    el("text", { x: 0, y: 30, class: "lbl" }, a, e.id);
-    // speech bubble removed (too distracting): see the plan progress bar on the right for the current action
-  });
-}
-
 // ================================================================ equipment table
 function renderTable(f) {
   const devRows = Object.entries(f.devices).map(([id, d]) => `<tr><td><b>${esc(id)}</b></td><td>${esc(d.category)}</td><td>${esc(d.model)}${d.verified ? "" : " (specs unverified)"}</td>
@@ -770,9 +605,9 @@ function render() {
   if (S.view === "table") { if (typeof renderGear === "function") renderGear(f); else renderTable(f); if ($("agentConsole")) $("agentConsole").hidden = true; }   // equipment page: all equipment on one big table
   else {
     document.body.classList.toggle("view-iso", S.view === "iso");
-    const box = S.view === "front" ? renderFront(svg, f, st) : S.view === "iso" ? renderIso(svg, f, st) : renderTop(svg, f, st);
+    if (S.view === "front") S.view = "iso";                // the flat front view was retired: the 2.5D view replaces it
+    const box = S.view === "iso" ? renderIso(svg, f, st) : renderTop(svg, f, st);
     if (typeof pumpGhosts === "function") pumpGhosts(svg);
-    if (S.view === "front" && typeof frontLayers === "function") frontLayers(f, st);
     if (S.view === "iso" && typeof isoLayers === "function") { isoLayers(f); isoXray(ISO.hover); }   // keep the hover see-through across redraws
     if (typeof demoTick === "function") demoTick(f);
     if (typeof renderConsole === "function") renderConsole(f);
@@ -791,7 +626,7 @@ function applyVB() {
 }
 function placeBubble() {
   const b = $("bubble");
-  if (!S.bubbleAnchor || S.view !== "front") { b.hidden = true; return; }
+  if (!S.bubbleAnchor) { b.hidden = true; return; }
   const svg = $("world"), m = svg.getScreenCTM(); if (!m) return;
   const p = svg.createSVGPoint(); p.x = S.bubbleAnchor.x; p.y = S.bubbleAnchor.y;
   const q = p.matrixTransform(m), r = $("stage").getBoundingClientRect();
@@ -890,7 +725,7 @@ function setView(v) {
 for (const b of document.querySelectorAll(".tabs button")) b.onclick = () => setView(b.dataset.view);
 document.addEventListener("keydown", (e) => {
   if (["INPUT", "SELECT", "TEXTAREA"].includes(document.activeElement?.tagName)) return;
-  if (e.key === "1") setView("front"); else if (e.key === "2") setView("top"); else if (e.key === "3") setView("table"); else if (e.key === "4") setView("iso");
+  if (e.key === "1" || e.key === "4") setView("iso"); else if (e.key === "2") setView("top"); else if (e.key === "3") setView("table");
   else if (e.key === "f" || e.key === "F") $("fit").click();
   else if (e.key === "+" || e.key === "=") zoomBy(1 / 1.25); else if (e.key === "-") zoomBy(1.25);
   else if (e.key === " ") { e.preventDefault(); togglePlay(); }
@@ -926,7 +761,7 @@ function tip(e, html) { const t = $("tip"); t.innerHTML = html; t.hidden = false
 function hideTip() { $("tip").hidden = true; }
 
 // ================================================================ data: live and replay
-function reset(mode) { clearInterval(S.sbPoll); if (mode !== "live") clearInterval(S.poll); Object.assign(S, { mode, static: null, frames: [], events: [], idx: 0, frameNext: 0, eventNext: 0, score: null, follow: true, playing: false }); $("chkFollow").checked = true; $("btnPlay").textContent = "▶"; S.fitted = { front: false, top: false }; S.vb = null; }
+function reset(mode) { clearInterval(S.sbPoll); if (mode !== "live") clearInterval(S.poll); Object.assign(S, { mode, static: null, frames: [], events: [], idx: 0, frameNext: 0, eventNext: 0, score: null, follow: true, playing: false }); $("chkFollow").checked = true; $("btnPlay").textContent = "▶"; S.fitted = { iso: false, top: false }; S.vb = null; }
 // three experiment phases: arranging (drag / rotate on the bench) → running (view only) → after abort / finish, back to arranging
 async function loadExperimentBench(exp) {
   try {
@@ -974,13 +809,14 @@ async function startLive() {
   try {
     if (S.sbPlaying) await api("/api/sandbox/pause", { sid: "studio" });
     const extra = typeof DEMO !== "undefined" && DEMO.prep && $("selPlanner").value === "fixed" ? { plan: DEMO.prep.plan, assembly_steps: DEMO.prep.assembly_steps || 0 } : {};
-    await api("/api/live/start", { experiment: exp, seed: $("inSeed").value, humans: $("inHumans").value, robot: $("selRobot").value, operators: $("inOperators").value, planner: $("selPlanner").value, speed: $("selSpeed").value, layout, overseer: overseerChoice(), ...extra });
+    await api("/api/live/start", { experiment: exp, seed: $("inSeed").value, humans: $("inHumans").value, robot: $("selRobot").value, operators: $("inOperators").value, planner: $("selPlanner").value, speed: $("selSpeed").value, layout, overseer: overseerChoice(), faults: faultChoice(), ...extra });
   } catch (e) { $("hint").textContent = e.message; if (typeof toast === "function") toast(e.message, true); return; }
   if (typeof toggleDrawer === "function") toggleDrawer(false);
   reset("live"); startPolling();
 }
 // who monitors and decides while the plan runs (prep library option): "llm" = DeepSeek, "rule" = the plan's rules
 function overseerChoice() { return document.getElementById("prepOverseer")?.value || "llm"; }
+function faultChoice() { return document.getElementById("prepFault")?.value || ""; }      // fault test preset (operator)
 async function stopLive() { try { await api("/api/live/stop", {}); } catch { /* already stopped */ } }
 function updateRunBtn() {
   const b = $("runBtn"); if (!b) return;

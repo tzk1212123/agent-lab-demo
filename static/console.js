@@ -51,9 +51,10 @@ function renderConsole(f) {
   const latest = S.mode === "live" && S.idx === S.frames.length - 1;
   const evs = latest ? S.events : S.events.filter((e) => e.seq < (f.event_seq ?? Infinity));
   let cur = 0, dec = null, thought = null, ovMode = null, ovLive = null;
-  const ctl = [], params = [], last = {}, decisions = [], checks = [];
+  const ctl = [], params = [], last = {}, decisions = [], checks = [], faults = [];
   for (const e of evs) {
     if (e.type === "overseer_mode") ovMode = e;
+    else if (e.type === "fault") faults.push(e);
     else if (e.type === "overseer") {                     // the LLM's two jobs: closed-loop decisions and monitoring
       if (e.phase === "thinking" || e.phase === "progress") ovLive = { ...(ovLive?.step_id === e.step_id && ovLive.role === e.role ? ovLive : {}), ...e };
       else { ovLive = null; (e.role === "decide" ? decisions : checks).push(e); }
@@ -97,8 +98,10 @@ function renderConsole(f) {
 …${esc(ovLive.reasoning.slice(-360))}` : ""}</div></div>`;
   }
   if (decisions.length) ovHtml += `<div class="con-sec"><i>🧭 Decisions</i>${decisions.slice(-3).reverse().map((e) => `<div class="ov-dec">${tt(e.t)}${by(e)} <b>round ${(e.iteration ?? 0) + 1}</b> ·
-      ${e.observation ? esc(e.observation) + " " : ""}→ ${e.done ? "<b>goal met</b>" : `<b>${esc(fv(e.vars)) || "no change"}</b>`}<div class="muted">${esc(e.reason || "")}</div></div>`).join("")}</div>`;
+      ${e.observation ? esc(e.observation) + " " : ""}→ ${e.stop ? `<b class="ov-stop">stop: a human should check</b>` : e.done ? "<b>goal met</b>" : `<b>${esc(fv(e.vars)) || "no change"}</b>`}<div class="muted">${esc(e.reason || "")}</div></div>`).join("")}</div>`;
   const lastCheck = checks[checks.length - 1];
+  const fired = faults.filter((e) => e.note && !/^armed/.test(e.note));      // operator view: what was injected and when it hit
+  if (fired.length && S.operator) ovHtml += `<div class="con-sec ov-fault"><i>⚡ Injected fault (operator view)</i>${fired.slice(-2).reverse().map((e) => `<div>${tt(e.t)}${esc(e.note)}</div>`).join("")}</div>`;
   if (lastCheck) {
     const bad = checks.filter((e) => e.action || e.ok === false).slice(-2).reverse();
     ovHtml += `<div class="con-sec"><i>👁 Monitoring</i>${lastCheck.source === "check" ? `<div>${tt(lastCheck.t)}${lastCheck.ok ? "✓" : "⚠"} ${esc(lastCheck.watch || "")}${lastCheck.ok ? "" : `: ${esc((lastCheck.problems || []).join("; "))}`}</div>` : ""}

@@ -1,4 +1,4 @@
-// Double-click any device (top view / front view / equipment page) → details: intro, how it is simulated, model setting (swappable when the category has other models), specs, commands, readings, sources.
+// Double-click any device (top view / 2.5D view / equipment page) → details: intro, how it is simulated, model setting (swappable when the category has other models), specs, commands, readings, sources.
 // Backend: /api/device_info?profile=…; model swap: sandbox action change_model (only while arranging the bench, not during a run).
 "use strict";
 

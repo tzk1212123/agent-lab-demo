@@ -14,6 +14,7 @@ function prepInit(ex) {
       <span class="sp"></span>
       <span class="prep-opts"><label>Executor<select id="prepExec"><option value="xarm6_standard">Robot arm (xArm 6)</option><option value="">Human</option></select></label>
       <label title="Who watches the run (anomalies) and makes the closed-loop decisions">Monitoring &amp; decisions<select id="prepOverseer"><option value="llm">LLM (DeepSeek)</option><option value="rule">Rules only</option></select></label>
+      <label title="Make something go wrong on purpose, to see how monitoring copes (operator test)">Fault test<select id="prepFault"><option value="">None</option><option value="device_timeout">A device stops answering once</option><option value="sensor_frozen">Main sensor freezes (10 min in)</option><option value="weak_stock">A stock is 20 % weaker than its label</option></select></label>
       <label>Speed<select id="prepSpeed" title="1× = same timing as a real experiment (including waits)"><option value="1">1× real time</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option></select></label></span>
     </div>`;
   const sync = (a, b) => { $(a).onchange = () => { $(b).value = $(a).value; $(b).onchange?.(); }; };   // keep in sync with the same settings in the right panel

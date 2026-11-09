@@ -52,7 +52,6 @@ function groupBox(f, ids) {
     }
   }
   if (!isFinite(x0)) return null;
-  if (geo.mode === "front") y0 -= 180;                     // tubing arches up in front view; leave extra room above
   return { x0, y0, x1, y1 };
 }
 function fitBox(bx) {
@@ -117,50 +116,3 @@ document.addEventListener("keydown", (e) => {
 });
 $("focusBtn")?.addEventListener("click", focusNow);
 $("chkAutoFocus")?.addEventListener("change", (e) => { FOCUS.auto = e.target.checked; if (FOCUS.auto) { FOCUS.key = null; } });
-
-// ---------------------------------------------------------------- front-view layering
-// While a group is working: it shows normally; equipment in front of it (closer to the viewer, overlapping horizontally) becomes a translucent outline; the rest fades.
-function frontLayers(f, st) {
-  const seeds = activeSeeds(f); if (!seeds.size) return;
-  const ids = focusGroupOf(f, seeds);
-  const slotOf = (id) => {
-    if (f.devices[id]) return st.slots[f.devices[id].slot];
-    const loc = f.containers[id]?.location;
-    return st.slots[loc] || (f.devices[loc] ? st.slots[f.devices[loc].slot] : null);
-  };
-  let yFront = -Infinity, x0 = Infinity, x1 = -Infinity;
-  for (const id of ids) {
-    const s = slotOf(id); if (!s) continue;
-    yFront = Math.max(yFront, s.y_mm + s.d_mm / 2); x0 = Math.min(x0, s.x_mm - s.w_mm / 2); x1 = Math.max(x1, s.x_mm + s.w_mm / 2);
-  }
-  if (!isFinite(yFront)) return;
-  for (const node of $("world").querySelectorAll("[data-d], [data-c]")) {
-    const id = node.getAttribute("data-d") || node.getAttribute("data-c");
-    if (ids.has(id)) continue;
-    const s = slotOf(id); if (!s) continue;
-    const inFront = s.y_mm - s.d_mm / 2 >= yFront - 1, overlap = s.x_mm - s.w_mm / 2 < x1 && s.x_mm + s.w_mm / 2 > x0;
-    node.classList.add(inFront && overlap ? "layer-block" : "layer-dim");
-  }
-}
-
-// Hover see-through: in front view, hovering an instrument / container makes things in front of it translucent
-function frontXray(id) {
-  if (S.view === "iso") return;                            // 2.5D view: hover is handled per whole instrument / vessel in iso.js
-  for (const n of $("world").querySelectorAll(".xray-block")) n.classList.remove("xray-block");
-  if (!id || S.view !== "front") return;
-  const f = S.frames[S.idx], st = S.static; if (!f || !st) return;
-  const slotOf = (k) => {
-    if (f.devices[k]) return st.slots[f.devices[k].slot];
-    const loc = f.containers[k]?.location;
-    return st.slots[loc] || (f.devices[loc] ? st.slots[f.devices[loc].slot] : null);
-  };
-  const s0 = slotOf(id); if (!s0) return;
-  const yFront = s0.y_mm + s0.d_mm / 2, x0 = s0.x_mm - s0.w_mm / 2, x1 = s0.x_mm + s0.w_mm / 2;
-  for (const node of $("world").querySelectorAll("[data-d], [data-c]")) {
-    const k = node.getAttribute("data-d") || node.getAttribute("data-c");
-    if (k === id || f.containers[k]?.location === id) continue;
-    const s = slotOf(k); if (!s) continue;
-    if (s.y_mm - s.d_mm / 2 >= yFront - 1 && s.x_mm - s.w_mm / 2 < x1 && s.x_mm + s.w_mm / 2 > x0) node.classList.add("xray-block");
-  }
-  for (const a of $("world").querySelectorAll(".arm.ghost")) a.classList.add("xray-block");
-}

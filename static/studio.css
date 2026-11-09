@@ -724,3 +724,6 @@ body.view-iso .iso-only { display: block; }
 .ov-llm { background: #e0a23a; color: #2a1f08; }
 .ov-rule { background: #3d5a4a; color: #cfe3d4; }
 .ov-dec { margin: 3px 0; }
+.ov-fault { border-left: 3px solid #e06a5a; padding-left: 6px; }
+.ov-fault i { color: #ffb4a8; }
+.ov-stop { color: #ffb4a8; }
