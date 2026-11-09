@@ -26,7 +26,7 @@ function capEvents(f) {                                   // events up to the fr
 function capName(id, f) {                                 // "v1 (beaker)", "pump_2", "the pH meter"
   const d = f.devices[id];
   if (d) return id;
-  return typeof fxLabel === "function" ? fxLabel(f)(id) : id;
+  return f.containers[id]?.label ? capShort(id, f) : id;            // "the mixing beaker", not "mix (Mixing beaker )"
 }
 function capShort(id, f) {                                // "Cyan dye 1.00×10⁻⁴ M" → "cyan dye"; falls back to the id
   const c = f.containers[id]; if (!c?.label) return id;
