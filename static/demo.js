@@ -201,8 +201,6 @@ function renderProgress(f, cur) {
   box.innerHTML = `<div class="pp-title">${esc(p.title)}</div>
     <div class="pp-bar"><div style="width:${pct}%"></div></div>
     <div class="pp-row"><span>${DEMO.done ? "Done" : `${p.assembly_steps && cur <= p.assembly_steps ? "Assembling · " : (p.assembly_steps ? "Running · " : "")}Step ${cur || 0} / ${n}`}</span><span>${pct}%</span></div>
-    ${!DEMO.done && st ? `<div class="pp-cur">▶ ${esc(stepText(st.step, p.labels))}</div>` : ""}
-    ${!DEMO.done && nx ? `<div class="pp-next">Next: ${esc(stepText(nx.step, p.labels))}</div>` : ""}
     ${p.assembly_steps && cur <= p.assembly_steps && !DEMO.done ? "" : briefHtml(p, cur, f)}
     <div class="pp-row muted"><span>Elapsed ${fmtT(Math.max(0, f.t - DEMO.t0))}</span><span>${esc($("selSpeed")?.value || "1")}× speed</span></div>
     ${DEMO.done || DEMO.skipHinted ? "" : `<div class="pp-row muted"><span>Enter skips this step</span></div>`}`;
@@ -288,13 +286,12 @@ function briefHtml(p, cur, f) {
     if (label === "decision") {
       const d = decisions[decisions.length - 1];
       if (!d) return "";
-      const v = Object.entries(d.vars || {}).filter(([, x]) => +x > 0).map(([k, x]) => `${k} ${+(+x).toFixed(3)}`).join(", ");
-      return `round ${decisions.length}: ${d.stop ? "stop — a human should check" : d.done ? "target reached" : v || "no change"}`;
+      return `round ${decisions.length}: ${typeof capDecision === "function" ? capDecision(d) : ""}`;
     }
     const q = Object.values(rec[label] || {})[0];
     return q && q.value != null ? `${label} ${typeof q.value === "number" ? +q.value.toFixed(4) : q.value}` : "";
   };
-  let h = `<div class="pp-brief"><div>${esc(b.summary || "")}</div>`;
+  let h = `<div class="pp-brief">${(b.stages || []).length ? "" : `<div>${esc(b.summary || "")}</div>`}`;   // closed loops: the stages say it
   if (!(b.stages || []).length) {
     h += (b.inputs || []).length ? `<div class="pp-io"><i>In</i>${b.inputs.map(esc).join("; ")}</div>` : "";
     h += (b.outputs || []).length ? `<div class="pp-io"><i>Out</i>${b.outputs.map(esc).join("; ")}</div>` : "";
@@ -306,7 +303,8 @@ function briefHtml(p, cur, f) {
   starts.forEach((i, k) => { if (i <= cur && (now < 0 || i > starts[now])) now = k; });   // (a loop jumping back lands on its own stage)
   h += `<ol class="pp-stages">${b.stages.map((s, k) => {
     const out = (s.show || []).map(val).filter(Boolean).join(" · ");
-    return `<li class="${k === now && !DEMO.done ? "cur" : ""}${s.decision ? " llm" : ""}"><b>${s.decision ? "🧠 " : ""}${esc(s.title)}</b> — ${esc(s.does || "")}${s.adjust ? ` <span class="muted">(adjusts: ${esc(s.adjust)})</span>` : ""}${out ? `<div class="pp-out">${esc(out)}</div>` : ""}</li>`;
+    const open = k === now && !DEMO.done;               // only the current stage is spelled out; the others are one-line titles
+    return `<li class="${open ? "cur" : "fold"}${s.decision ? " llm" : ""}"><b>${s.decision ? "🧠 " : ""}${esc(s.title)}</b>${open ? ` — ${esc(s.does || "")}${out ? `<div class="pp-out">${esc(out)}</div>` : ""}` : ""}</li>`;
   }).join("")}</ol>`;
   return h + "</div>";
 }

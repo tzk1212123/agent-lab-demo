@@ -9,6 +9,25 @@ function paperRow(ok, name, sub, detail) {
     <span class="pc-name">${esc(name)}${sub ? ` <span class="muted">${esc(sub)}</span>` : ""}</span>
     ${detail ? `<div class="pc-detail">${esc(detail)}</div>` : ""}</div>`;
 }
+// one compatibility signal + the plan's labels (auto / needs human, open / closed) and where the LLM decides
+function paperSignal(r) {
+  const c = r.check, lb = r.labels || {};
+  const lvl = c.level || "approximate";
+  const head = {compatible: "✓ Compatible: the simulator can run this paper",
+                approximate: "≈ Runs, with approximations",
+                incompatible: "✗ Not compatible: the simulator can't stand in for this paper"}[lvl];
+  const why = (c.reasons || []).map((x) => `<li>${esc(x)}</li>`).join("");
+  const tags = lvl === "incompatible" ? "" : `<div class="pc-tags">
+      <span class="tag">${lb.execution === "auto" ? "auto" : lb.execution === "needs_human" ? "needs human" : "?"}</span>
+      <span class="tag">${c.loop === "closed" ? "closed loop" : "open loop"}</span></div>`;
+  const pts = (c.points || []).map((p) => `<li>🧠 <b>${esc(p.id)}</b>: ${esc(p.question)} <span class="muted">(adjusts ${esc(p.adjusts.join(", "))}${p.rule ? "; fallback rule " + esc(p.rule) : ""})</span></li>`).join("");
+  const lost = c.closed_loop_lost ? `<div class="pc-bad">The paper is closed-loop, but its decisions couldn't be compiled: this plan runs open-loop on the paper's final conditions.</div>` : "";
+  const hum = lb.execution === "needs_human" && (lb.human_reasons || []).length ? `<div class="muted">Needs a human: ${esc(lb.human_reasons.join("; "))}</div>` : "";
+  return `<div class="pc-verdict ${lvl === "compatible" ? "good" : lvl === "incompatible" ? "bad" : "warn"}">${head}</div>
+      ${why ? `<ul class="muted pc-why">${why}</ul>` : ""}${tags}${hum}
+      ${pts ? `<div class="muted">LLM decision points:</div><ul class="pc-why">${pts}</ul>` : ""}${lost}`;
+}
+
 function renderPaperCheck(r, target) {
   const c = r.check, src = r.source || {};
   const inst = c.instruments.map((x) => x.status === "ok"
@@ -25,7 +44,7 @@ function renderPaperCheck(r, target) {
   (target || $("genCheck")).innerHTML = `
     <div class="pc-head"><b>${esc(r.title)}</b>
       <div class="muted">${esc(src.host || "")} · ${esc(src.kind || "")} · ${esc(src.note || "")}</div>
-      <div class="pc-verdict ${m.instruments || m.steps || m.reactions || m.materials || (r.blocking || []).length ? "warn" : "good"}">${esc(c.verdict)}</div>
+      ${paperSignal(r)}
       <div class="muted">Plan: ${r.plan_steps} steps; ${Math.round(cov.fraction_executable * 100)}% executable (mapped ${cov.mapped}, approximated ${cov.approximated}, unsupported ${cov.unsupported})</div>
       ${c.fetch_from_drawer.length ? `<div class="muted">Add from the equipment drawer: ${esc(c.fetch_from_drawer.join(", "))}</div>` : ""}
     </div>

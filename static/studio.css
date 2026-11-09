@@ -352,6 +352,9 @@ body:not(.dragging-any) #world [data-d] { cursor: grab; }
 .pc-verdict { margin: 4px 0; font-weight: 600; }
 .pc-verdict.good { color: var(--good); }
 .pc-verdict.warn { color: #ffc24a; }
+.pc-verdict.bad { color: var(--bad, #ff6b6b); }
+.pc-why { margin: 2px 0 4px 18px; padding: 0; font-size: 12px; }
+.pc-tags { display: flex; gap: 6px; margin: 4px 0; }
 .pc-row { display: grid; grid-template-columns: 16px 1fr; gap: 2px 6px; padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,.05); }
 .pc-row .pc-mark { font-weight: 700; }
 .pc-row.ok .pc-mark { color: var(--good); }
@@ -749,3 +752,23 @@ body.view-iso .iso-only { display: block; }
 .bc-btns { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px 16px; }
 .bc-stages li.llm b, .pp-stages li.llm b { color: #ffc46b; }
 .bc-llm { margin-top: 8px; padding: 6px 10px; border-left: 3px solid #e0a23a; color: #ffd99a; font-size: 12.5px; }
+
+/* ---- caption.js: one subtitle line, floating numbers, the LLM's moment, 🧠 on the timeline (no boxes, no cards) */
+.caption { position: absolute; left: 50%; bottom: 52px; transform: translateX(-50%); max-width: min(86%, 980px); z-index: 6;
+  font-size: 19px; line-height: 1.35; font-weight: 600; text-align: center; color: #f4f7ee; pointer-events: none;
+  text-shadow: 0 0 6px rgba(0,0,0,.95), 0 1px 3px rgba(0,0,0,.9), 0 0 18px rgba(0,0,0,.6); }
+.caption.llm { color: #ffd98a; font-size: 21px; }
+.caption.warn { color: #ffb0a0; }
+.caption.dim { color: #cfd8c8; font-weight: 500; font-size: 17px; }
+.cap-float { position: absolute; z-index: 7; transform: translate(-50%, 0); pointer-events: none; white-space: nowrap;
+  font: 700 16px/1 system-ui, sans-serif; color: #bfe9ff; text-shadow: 0 0 5px rgba(0,0,0,.95), 0 1px 2px #000;
+  animation: capRise 2.6s ease-out forwards; }
+.cap-float.read { color: #e8ffd0; }
+@keyframes capRise { 0% { opacity: 0; translate: 0 6px; } 12% { opacity: 1; } 75% { opacity: 1; } 100% { opacity: 0; translate: 0 -46px; } }
+.llm-link .llm-arc { fill: none; stroke: #ffd98a; stroke-width: 4; stroke-dasharray: 14 10; opacity: .9; }
+.llm-link .llm-brain { font-size: 64px; text-anchor: middle; dominant-baseline: auto; filter: drop-shadow(0 0 10px rgba(255,217,138,.8)); }
+.llm-link .llm-tag { font: 700 26px system-ui, sans-serif; fill: #ffd98a; text-anchor: middle; paint-order: stroke; stroke: rgba(0,0,0,.85); stroke-width: 5px; }
+.scrub-marks { position: absolute; top: 0; height: 100%; pointer-events: none; }
+.scrub-marks i { position: absolute; top: -14px; transform: translateX(-50%); font-style: normal; font-size: 14px; pointer-events: auto; cursor: default; }
+.timeline { position: relative; }
+.pp-stages li.fold { opacity: .55; }

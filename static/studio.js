@@ -608,6 +608,7 @@ function render() {
     if (S.view === "front") S.view = "iso";                // the flat front view was retired: the 2.5D view replaces it
     const box = S.view === "iso" ? renderIso(svg, f, st) : renderTop(svg, f, st);
     if (typeof pumpGhosts === "function") pumpGhosts(svg);
+    if (typeof renderLlmLink === "function") renderLlmLink(svg, f);   // 🧠 over what the LLM read → what it adjusts
     if (S.view === "iso" && typeof isoLayers === "function") { isoLayers(f); isoXray(ISO.hover); }   // keep the hover see-through across redraws
     if (typeof demoTick === "function") demoTick(f);
     if (typeof renderConsole === "function") renderConsole(f);
@@ -618,6 +619,7 @@ function render() {
   placeBubble();
   renderSide(f, st);
   if (typeof renderFx === "function") { renderFx(f); renderNarration(f); }
+  if (typeof renderCaption === "function") renderCaption(f);        // subtitle line, floating numbers, 🧠 timeline marks
 }
 function applyVB() {
   const v = S.vb; $("world").setAttribute("viewBox", `${v.x} ${v.y} ${v.w} ${v.h}`);

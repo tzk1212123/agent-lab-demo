@@ -3,7 +3,7 @@
 // agent_thought (model reasoning when the DeepSeek agent plans live). Who wrote the plan (LLM / human / program) is shown in the title.
 "use strict";
 
-const CON = { open: true };
+const CON = { open: false };   // collapsed by default: the subtitle and the bench say what is happening
 
 function conFmtParams(p) {
   return Object.entries(p || {}).map(([k, v]) => `${k}=${typeof v === "number" ? +v.toFixed(4) : v}`).join(", ");
