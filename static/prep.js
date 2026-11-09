@@ -1,4 +1,4 @@
-// Prep library (first view on page load): top strip picks the experiment (6 demo ones; expand for all plus paper-generated plans) + executor / speed;
+// Prep library (first view on page load): top strip picks the experiment (4 demo ones, one per label combination; expand for all plus paper-generated plans) + executor / speed;
 // below are two equipment tables (gear.js); devices needed by the selected experiment get a dashed outline. Then ▶ Start at top right.
 "use strict";
 

@@ -881,7 +881,7 @@ async function init() {
   const ex = await api("/api/experiments");
   const byId = Object.fromEntries(ex.experiments.map((e) => [e.id, e]));
   const show = (ex.showcase || []).filter((s) => byId[s.id]);
-  const fillExp = (all) => {                       // by default list only the 6 demo experiments; "Show all" lists everything
+  const fillExp = (all) => {                       // by default list only the demo experiments; "Show all" lists everything
     const cur = $("selExp").value;
     const top = show.map((s) => `<option value="${esc(s.id)}">${s.auto ? "Auto" : "Needs human"} · ${byId[s.id].loop === "closed" ? "Closed loop · " : ""}${esc(byId[s.id].title)}</option>`).join("");
     const rest = ex.experiments.filter((e) => !show.some((s) => s.id === e.id)).map((e) => `<option value="${esc(e.id)}">${esc(e.title)}</option>`).join("");
