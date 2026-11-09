@@ -77,6 +77,7 @@ async function demoStart(opts = {}) {             // opts: {robot, speed} (from 
   $("demoResult").innerHTML = ""; DEMO.done = false; DEMO.summaryShown = false;
   try {
     const prep = await api("/api/demo/prepare", { kind: c.kind, ref: c.ref, plan: c.plan || null });
+    if (!(await demoConfirmBrief(prep))) return;           // what the experiment does, then the user confirms (or cancels)
     DEMO.prep = prep; DEMO.current = 0; DEMO.t0 = null;
     demoRenderSteps();
     $("demoPhase").textContent = "Tidying bench: stowing unused equipment, placing what's needed…";
@@ -308,4 +309,32 @@ function briefHtml(p, cur, f) {
     return `<li class="${k === now && !DEMO.done ? "cur" : ""}"><b>${esc(s.title)}</b> — ${esc(s.does || "")}${s.adjust ? ` <span class="muted">(adjusts: ${esc(s.adjust)})</span>` : ""}${out ? `<div class="pp-out">${esc(out)}</div>` : ""}</li>`;
   }).join("")}</ol>`;
   return h + "</div>";
+}
+
+// before a run: what the experiment does (plan "brief": open loop = inputs → outputs; closed loop = stages), then
+// "Start experiment" or "Cancel". Resolves true to go ahead.
+function demoConfirmBrief(prep) {
+  return new Promise((resolve) => {
+    const b = prep.plan?.brief || {}, it = (PREP.ex?.experiments || []).concat(PREP.ex?.papers || []).find((e) => e.id === prep.ref) || {};
+    const tags = [it.execution && (it.execution === "auto" ? "Auto" : "Needs human"), it.loop && (it.loop === "closed" ? "Closed loop" : "Open loop")].filter(Boolean);
+    const list = (xs) => `<ul>${xs.map((x) => `<li>${esc(x)}</li>`).join("")}</ul>`;
+    let body = `<p>${esc(b.summary || prep.plan?.goal || "")}</p>`;
+    if ((b.inputs || []).length) body += `<h4>Inputs</h4>${list(b.inputs)}`;
+    if ((b.outputs || []).length) body += `<h4>${(b.stages || []).length ? "Outputs" : "Target outputs"}</h4>${list(b.outputs)}`;
+    if ((b.stages || []).length) body += `<h4>Stages</h4><ol class="bc-stages">${b.stages.map((s) => `<li><b>${esc(s.title)}</b> — ${esc(s.does || "")}${s.adjust ? `<div class="muted">adjusts: ${esc(s.adjust)}</div>` : ""}</li>`).join("")}</ol>
+      <div class="muted">Decision stages loop back until the target is met; the LLM (or the plan's rule) decides at each one.</div>`;
+    const m = document.createElement("div");
+    m.className = "di-modal";
+    m.innerHTML = `<div class="di-box bc-box"><div class="di-head"><b>${esc(prep.title)}</b>${tags.length ? ` <span class="bc-tags">${tags.map(esc).join(" · ")}</span>` : ""}</div>
+      <div class="di-body">${body}</div>
+      <div class="bc-btns"><button class="bc-cancel">Cancel</button><button class="primary bc-go">▶ Start experiment</button></div></div>`;
+    document.body.appendChild(m);
+    const done = (ok) => { document.removeEventListener("keydown", key, true); m.remove(); resolve(ok); };
+    const key = (e) => { if (e.key === "Escape") { e.stopPropagation(); done(false); } else if (e.key === "Enter") { e.preventDefault(); e.stopPropagation(); done(true); } };
+    document.addEventListener("keydown", key, true);
+    m.querySelector(".bc-go").onclick = () => done(true);
+    m.querySelector(".bc-cancel").onclick = () => done(false);
+    m.onclick = (e) => { if (e.target === m) done(false); };
+    m.querySelector(".bc-go").focus();
+  });
 }

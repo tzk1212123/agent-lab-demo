@@ -741,3 +741,9 @@ body.view-iso .iso-only { display: block; }
 .pp-out { font-family: ui-monospace, monospace; font-size: 11px; color: #b9e08f; }
 .iso-warn { fill: #ffb4a8; font-size: 26px; font-weight: 700; text-anchor: middle; paint-order: stroke; stroke: #3a1410; stroke-width: 5px; animation: fxBlinkWarn 1s steps(2) infinite; }
 @keyframes fxBlinkWarn { 50% { opacity: .45; } }
+/* "what this experiment does" before a run */
+.bc-box .di-body h4 { margin: 12px 0 4px; }
+.bc-box .di-body ul, .bc-stages { margin: 0; padding-left: 20px; }
+.bc-stages li { margin: 4px 0; }
+.bc-tags { font-size: 12px; color: var(--accent); margin-left: 8px; }
+.bc-btns { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px 16px; }
