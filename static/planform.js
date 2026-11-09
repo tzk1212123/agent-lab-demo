@@ -3,7 +3,7 @@
 const PF = { exp: null, rows: [], hints: null, plan: null, issues: {}, goal: "" };
 const PF_KINDS = { task: "Operation (skill)", command: "Instrument command", wait: "Wait", wait_until: "Wait until",
   repeat_until: "Repeat until", record: "Record readings", wait_stable: "Wait for stable reading",
-  decide: "Decision point (closed loop)", vars: "Plan variables" };
+  decide: "Decision point (closed loop)", vars: "Plan variables", tags: "Plan labels" };
 // extra (not shown as a cell): JSON for monitoring slots and decision-point specs; kept with the row and in the CSV
 const PF_COLS = ["depth", "kind", "target", "action", "params", "condition", "note", "extra"];
 

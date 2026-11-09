@@ -31,17 +31,28 @@ function prepRenderList() {
   const byId = Object.fromEntries(ex.experiments.map((e) => [e.id, e]));
   const c = DEMO.choice;
   const on = (kind, ref) => c && c.kind === kind && c.ref === ref ? "on" : "";
-  // badges: who runs it (auto / needs human) and loop type (open: fully planned in advance; closed: decisions during the run)
-  const loopB = (id) => { const l = byId[id]?.loop; return l ? [[l === "closed" ? "Closed loop" : "Open loop", `loop-${l}`]] : []; };
+  // two labels on every plan, read from the plan itself (server: demo.infer_tags): who runs it, and open / closed loop
+  const papersById = Object.fromEntries((ex.papers || []).map((p) => [p.id, p]));
+  const tagsOf = (it, autoFallback) => {
+    if (!it) return [];
+    const exe = it.execution || (autoFallback === undefined ? null : autoFallback ? "auto" : "needs_human");
+    const out = [];
+    if (exe) out.push([exe === "auto" ? "Auto" : "Needs human", exe === "auto" ? "auto" : "hum", (it.tag_why || []).join("; ")]);
+    if (it.loop) out.push([it.loop === "closed" ? "Closed loop" : "Open loop", `loop-${it.loop}`]);
+    return out;
+  };
   const chip = (kind, ref, title, badges = []) => `<button class="prep-chip ${on(kind, ref)}" data-kind="${kind}" data-ref="${esc(ref)}" title="${esc(title)}">
-      ${badges.map(([t, cls]) => `<i class="${cls}" title="${cls === "loop-closed" ? "Closed loop: later stages depend on earlier results; the LLM decides at the decision points" : cls === "loop-open" ? "Open loop: the whole procedure is written in advance; the LLM monitors" : ""}">${t}</i>`).join("")}<span>${esc(title)}</span></button>`;
+      ${badges.length ? `<b class="tagpair">${badges.map(([t, cls, why]) => `<i class="${cls}" title="${esc(cls === "loop-closed" ? "Closed loop: later stages depend on earlier results; the LLM decides at the decision points"
+        : cls === "loop-open" ? "Open loop: the whole procedure is written in advance; the LLM monitors"
+        : cls === "auto" ? "With the robot arm and the one-time assembly done first, no human is needed during the run"
+        : `A human is needed during the run${why ? ": " + why : ""}`)}">${t}</i>`).join("")}</b>` : ""}<span>${esc(title)}</span></button>`;
   const show = (ex.showcase || []).filter((s) => byId[s.id]);
-  let h = `<div class="prep-chips">${show.map((s) => chip("experiment", s.id, byId[s.id].title, [[s.auto ? "Auto" : "Needs human", s.auto ? "auto" : "hum"], ...loopB(s.id)])).join("")}
+  let h = `<div class="prep-chips">${show.map((s) => chip("experiment", s.id, byId[s.id].title, tagsOf(byId[s.id], s.auto))).join("")}
     <button id="prepMore" class="prep-more" ${window.STATIC_DEMO ? "hidden" : ""}>${PREP.all ? "Collapse" : `Show all (${ex.experiments.length} experiments + ${(ex.papers || []).length} paper plans)`}</button></div>`;
   if (PREP.all) {
     const rest = ex.experiments.filter((e) => !show.some((s) => s.id === e.id));
-    h += `<div class="prep-group"><h5>All experiments</h5><div class="prep-chips small">${rest.map((e) => chip("experiment", e.id, e.title, loopB(e.id))).join("")}</div></div>
-      <div class="prep-group"><h5>Paper-generated plans</h5><div class="prep-chips small">${(ex.papers || []).map((p) => chip("paper", p.id, p.title)).join("") || `<span class="muted">None yet</span>`}</div></div>`;
+    h += `<div class="prep-group"><h5>All experiments</h5><div class="prep-chips small">${rest.map((e) => chip("experiment", e.id, e.title, tagsOf(e))).join("")}</div></div>
+      <div class="prep-group"><h5>Paper-generated plans</h5><div class="prep-chips small">${(ex.papers || []).map((p) => chip("paper", p.id, p.title, tagsOf(papersById[p.id]))).join("") || `<span class="muted">None yet</span>`}</div></div>`;
   }
   if (c && !["experiment", "paper"].includes(c.kind)) h += `<div class="prep-chips"><button class="prep-chip on" disabled><i class="hum">Manual</i><span>${esc(c.title)}</span></button></div>`;
   $("prepList").innerHTML = h;
