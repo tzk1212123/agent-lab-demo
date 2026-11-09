@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>agent lab · Experiment studio</title>
+<link rel="stylesheet" href="static/studio.css?v=20261108185850">
+</head>
+<body class="panel-hidden demo-hidden">
+<header class="bar">
+  <div class="brand"><span class="logo">⬡</span> agent lab <small>STUDIO</small></div><span class="demo-badge" title="This online demo replays runs recorded with the simulator; editing the bench and generating plans from papers need the full app">Online demo · recorded runs</span>
+  <nav class="tabs" role="tablist" aria-label="View">
+    <button data-view="table" class="on" title="Shortcut 3: pick an experiment, see all equipment">Prep library</button>
+    <button data-view="top" title="Shortcut 2: arrange the bench">Top view</button>
+    <button data-view="front" title="Shortcut 1: flat front view">Front view</button>
+    <button data-view="iso" title="Shortcut 4: watch the experiment (2.5D), turn with Q and E">2.5D view</button>
+  </nav>
+  <div class="exp" id="expTitle">No experiment loaded</div>
+  <div class="clock"><span>Sim time</span><b id="simTime">—</b></div>
+  <span id="status" class="pill">Idle</span>
+  <button id="runBtn" class="primary run-btn" hidden></button>
+  <a class="link intro-link" href="#" id="introBtn" title="What this simulator is and what the LLM does in it">ⓘ Intro</a>
+</header>
+
+<div id="banner" class="banner" hidden></div>
+
+<div class="stage-wrap">
+  <aside id="demo" class="demo">
+    <h3>Import experiment <button id="demoHandle" class="demo-x" title="Collapse / expand (←)">‹</button></h3>
+    <div class="seg demo-tabs" id="demoTabs"><button data-k="paper" class="on">Plan from paper</button><button data-k="manual">Manual plan</button></div>
+    <div id="demoPaper">
+      <div class="row2"><input id="demoUrl" placeholder="https://… journal full text / arXiv / DOI"><button id="demoAnalyze">Generate plan</button></div>
+      <div id="demoPaperOut" class="paper-out"></div>
+      <p class="hint2">Previously generated plans are in the prep library (Show all → Paper-generated plans).</p>
+    </div>
+    <div id="demoManual" hidden>
+      <label>Use the bench and reagents of experiment<select id="pfExp"></select></label>
+      <button id="pfOpen">Open plan table (fill row by row / import CSV)</button>
+      <p class="hint2">One step per row: type, target, action, params. Same format as LLM-generated plans; see docs/plan_format.md.</p>
+    </div>
+    <div id="demoChoice"></div>
+    <div id="demoPhase" class="demo-phase"></div>
+    <div id="demoResult" class="demo-result"></div>
+    <ol id="demoSteps" class="demo-steps"></ol>
+  </aside>
+  <section class="stage" id="stage">
+    <svg id="world" aria-label="Experiment bench"></svg>
+    <svg id="fx" aria-hidden="true"><defs><marker id="fxArrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#ffe9b0"/></marker></defs></svg>
+    <div id="narr" class="narr" hidden></div>
+    <div id="tableView" class="table-view" hidden><div id="prepBar" class="prep-bar"></div><div id="gearArea"></div></div>
+    <div class="hud-left">
+      <button id="zoomIn" title="Zoom in (+)">＋</button>
+      <button id="zoomOut" title="Zoom out (−)">－</button>
+      <button id="fit" title="Fit all (F)">⊡</button>
+      <button id="focusBtn" title="Focus the working equipment group (G)">◎</button>
+      <button id="isoLeft" class="iso-only" title="Turn the bench left (Q)">⟲</button>
+      <button id="isoRight" class="iso-only" title="Turn the bench right (E)">⟳</button>
+    </div>
+    <div class="hud-bubble" id="bubble" hidden></div>
+    <svg id="benchOverlay" aria-hidden="true"></svg>
+    <div class="hint">? shortcuts · ← import · Enter skip step · ↓ equipment · → sidebar · E rotate · wheel zoom · drag pan · 1/2/3/4 views · Q / E turn 2.5D · F fit · G focus · Space run/pause</div>
+    <button id="panelHandle" class="edge-handle" title="Sidebar (→)">‹</button>
+    <button id="demoEdge" class="edge-handle left" title="Import experiment (←)">›</button>
+    <button id="drawerHandle" class="drawer-handle" title="Equipment drawer (↓)">Equipment ▴</button>
+    <div id="drawer" class="drawer" hidden>
+      <div class="dr-head"><div id="drTabs" class="dr-tabs"></div><span class="muted">Drag onto the bench · wheel to scroll · Esc to close</span></div>
+      <div id="drRow" class="dr-row"></div>
+    </div>
+    <div id="benchToast" class="bench-toast" hidden></div>
+    <div id="runCol" class="run-col">                       <!-- run panel: plan progress + agent console (one top-right column) -->
+      <div id="planProg" class="plan-prog" hidden></div>
+      <div id="agentConsole" class="agent-console" hidden></div>
+    </div>
+  </section>
+
+  <aside class="panel">
+    <section class="card">
+      <h3>Run</h3>
+      <label hidden>Experiment <a href="#" id="expMore" class="link exp-more">Show all</a><select id="selExp"></select></label>
+      <p class="hint2">Pick experiments in the prep library (3).</p>
+      <div class="row2">
+        <label>Seed<input id="inSeed" type="number" placeholder="default"></label>
+        <label>human<input id="inHumans" type="number" min="0" placeholder="default"></label>
+        <label>Offline operators<input id="inOperators" type="number" min="0" placeholder="0" title="Task cards go to the /operator page and wait for a real person to confirm"></label>
+        <label>Robot arm<select id="selRobot"><option value="">None</option><option value="xarm6_standard">xArm 6</option></select></label>
+      </div>
+      <label>Planner<select id="selPlanner"></select></label>
+      <label>Speed<select id="selSpeed" title="1× = same timing as a real experiment (including waits)"><option value="1" selected>1× real time</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option></select></label>
+      <div class="row2"><button id="btnStart" class="primary">▶ Start</button><button id="btnStop">■ Stop</button></div>
+      <button id="btnBench" title="Back to the free-arrangement bench (after a run / replay)">Back to arranging / manual bench</button>
+      <label>Replay<select id="selRun"><option value="">— pick a record —</option></select></label>
+      <p class="hint2" id="hint"></p>
+    </section>
+    <section class="card">
+      <h3>Current action</h3>
+      <div id="activity" class="muted">—</div>
+    </section>
+    <section class="card">
+      <h3>Readings <span class="legend"><i class="k measured"></i>measured <i class="k estimated"></i>estimated <i class="k simulated"></i>simulated <i class="k observed"></i>observed</span></h3>
+      <div id="readings"></div>
+    </section>
+    <section class="card">
+      <h3>Goal and results</h3>
+      <div id="goal" class="goal"></div>
+      <div id="result"></div>
+    </section>
+  </aside>
+</div>
+
+<footer class="timeline">
+  <button id="btnPlay" title="Play / pause (Space)">▶</button>
+  <select id="selPlaySpeed" title="Manual bench: sim time rate; replay: playback speed"><option value="1" selected>1×</option><option value="2">2×</option><option value="5">5×</option><option value="10">10×</option></select>
+  <input id="scrub" type="range" min="0" max="0" value="0" aria-label="Timeline">
+  <label class="follow"><input type="checkbox" id="chkFollow" checked> Follow</label>
+  <label class="follow" title="When an equipment group starts working, the view flies to it"><input type="checkbox" id="chkAutoFocus" checked> Auto-focus</label>
+  <div class="ticker" id="ticker"></div>
+</footer>
+<div id="genPage" class="gen-page" hidden>
+  <div class="gen-head"><b>Generate plan</b><span id="genUrl" class="muted gen-url"></span><span class="sp"></span>
+    <span class="muted">Elapsed <b id="genClock">0 s</b></span><button id="genUse" class="primary" disabled>Use this plan</button><button id="genClose" title="Close">✕</button></div>
+  <div class="gen-body">
+    <div class="gen-col">
+      <h4>Progress</h4><ol id="genStages" class="gen-stages"></ol>
+      <h4>Experimental section (text the LLM reads)</h4><pre id="genExcerpt" class="gen-pre"></pre>
+    </div>
+    <div class="gen-col wide">
+      <h4>LLM reasoning <span class="muted">(deep thinking, streamed)</span></h4><div id="genThink" class="gen-think"></div>
+      <h4>Structured output <span class="muted">(protocol IR, streamed)</span></h4><pre id="genOut" class="gen-pre out"></pre>
+    </div>
+    <div class="gen-col">
+      <h4>Log</h4><div id="genLog" class="gen-log"></div>
+      <h4>Check results</h4><div id="genCheck" class="paper-out"></div>
+    </div>
+  </div>
+</div>
+<div id="welcome" class="welcome">
+  <div class="wl-box">
+    <div class="wl-top"><span class="logo">⬡</span> <b>agent lab</b><span class="muted">General agentic lab · simulator</span></div>
+    <h1>A simulation of a general agentic lab</h1>
+    <p class="wl-lead">A chemistry lab where an LLM plans and runs experiments. It simulates many chemical reactions and instruments,
+      and the LLM controls them <b>the same way it would control real ones</b> — same commands, same readings.</p>
+    <p class="wl-online">This online demo replays runs recorded with the simulator: browse equipment, double-click devices, and press ▶ Start to watch an experiment. Editing the bench, generating plans from papers and live LLM planning need the full app.</p><div class="wl-kpis" id="wlKpis"></div>
+
+    <h2>What the LLM does here</h2>
+    <div class="wl-cards">
+      <div class="wl-card">
+        <h3>Automated experiments</h3>
+        <p class="muted">Instruments do the work: pump dosing, stirring, heating, probe / spectral readings.</p>
+        <ul>
+          <li>Writes the plan from a paper or brief</li>
+          <li>Sets instrument parameters</li>
+          <li>Monitors readings and adjusts</li>
+        </ul>
+        <p class="wl-eg">e.g. four-pump colour mixing, titration, calorimetry</p>
+      </div>
+      <div class="wl-card">
+        <h3>Experiments needing physical actions</h3>
+        <p class="muted">Moving containers, tubing, probes, filtering, weighing solids.</p>
+        <ul>
+          <li><b>Human help</b>: actions go out as task cards</li>
+          <li><b>Robot arm</b>: does what it can; humans do the rest</li>
+          <li>One-off assembly is done before the run</li>
+        </ul>
+        <p class="wl-eg">e.g. foam half-life, aspirin synthesis</p>
+      </div>
+    </div>
+    <div class="wl-warn"><b>Robot-arm simulation and design are still immature</b>: only reach (xArm 6, 700 mm), travel time,
+      assumed grasp success, compatible containers and 8 basic operations are modelled; no kinematics, collisions or vision.
+      Tubing, filtering and weighing solids are still done by people.</div>
+
+    <h2>How to use</h2>
+    <ol class="wl-steps">
+      <li>Pick an experiment in the <b>prep library</b>, plus executor and speed</li>
+      <li>Press <b>▶ Start</b> (top right) to watch setup and the run</li>
+      <li>Press <b>←</b> to generate a plan from a paper link, or fill one in by hand</li>
+      <li>Double-click any device for details</li>
+    </ol>
+    <div class="wl-foot"><a class="link" href="intro.html" target="_blank">More: how it works, what's been tested ↗</a><span class="sp"></span>
+      <button id="wlGo" class="primary">Next: shortcuts →</button></div>
+  </div>
+</div>
+<div id="keys" class="welcome" hidden>
+  <div class="wl-box ks-box">
+    <div class="wl-top"><span class="logo">⬡</span> <b>agent lab</b><span class="muted">Keyboard shortcuts · press <kbd>?</kbd> anytime to see this again</span></div>
+    <h1>Shortcuts</h1>
+    <div class="ks-grid">
+      <section><h2>Views</h2>
+        <div class="ks"><kbd>3</kbd><span>Prep library</span></div>
+        <div class="ks"><kbd>2</kbd><span>Top view (arrange the bench)</span></div>
+        <div class="ks"><kbd>4</kbd><span>2.5D view (watch the run); <kbd>Q</kbd> <kbd>E</kbd> turn the bench</span></div>
+        <div class="ks"><kbd>1</kbd><span>Front view (flat)</span></div>
+      </section>
+      <section><h2>Panels</h2>
+        <div class="ks"><kbd>←</kbd><span>Import panel (paper link / manual plan)</span></div>
+        <div class="ks"><kbd>→</kbd> <kbd>P</kbd><span>Run sidebar</span></div>
+        <div class="ks"><kbd>↓</kbd><span>Equipment drawer</span></div>
+        <div class="ks"><kbd>Esc</kbd><span>Close drawer / dialog</span></div>
+      </section>
+      <section><h2>Camera</h2>
+        <div class="ks"><kbd>Wheel</kbd><span>Zoom</span></div>
+        <div class="ks"><kbd>+</kbd> <kbd>−</kbd><span>Zoom in / out</span></div>
+        <div class="ks"><kbd>Drag</kbd><span>Pan (on empty space)</span></div>
+        <div class="ks"><kbd>F</kbd><span>Fit everything</span></div>
+        <div class="ks"><kbd>G</kbd><span>Focus the working group</span></div>
+      </section>
+      <section><h2>Bench (top view)</h2>
+        <div class="ks"><kbd>Drag</kbd><span>Move a device or container</span></div>
+        <div class="ks"><kbd>E</kbd><span>Rotate the hovered / dragged device 90°</span></div>
+        <div class="ks"><kbd>Double-click</kbd><span>Device details and model</span></div>
+      </section>
+      <section><h2>Running</h2>
+        <div class="ks"><kbd>Enter</kbd><span>Skip ahead through the current step</span></div>
+        <div class="ks"><kbd>Space</kbd><span>Play / pause (manual bench, replays)</span></div>
+      </section>
+    </div>
+    <div class="wl-foot"><button id="ksBack">← Back to intro</button><span class="sp"></span>
+      <button id="ksGo" class="primary">Open prep library</button></div>
+  </div>
+</div>
+<div id="devInfo" class="di-modal" hidden>
+  <div class="di-box">
+    <div class="di-head"><b id="diTitle"></b><span class="sp"></span><button id="diClose" title="Close (Esc)">✕</button></div>
+    <div id="diBody" class="di-body"></div>
+  </div>
+</div>
+<div id="pfModal" class="pf-modal" hidden>
+  <div class="pf-box">
+    <div class="pf-head"><b>Manual plan</b> · <span id="pfTitle"></span>
+      <input id="pfGoal" placeholder="Goal (one sentence, optional)"><button id="pfClose" title="Close (Esc)">✕</button></div>
+    <div class="pf-tools">
+      <button id="pfLoad" title="Convert this experiment's existing plan into a table for editing">Load existing plan</button>
+      <button id="pfBlank">Blank table</button>
+      <button id="pfAdd">＋ Add row</button>
+      <label class="pf-file">Import CSV<input id="pfImport" type="file" accept=".csv,text/csv" hidden></label>
+      <button id="pfExport" title="Opens directly in Excel">Export CSV</button>
+      <span class="sp"></span>
+      <button id="pfCheck">Check and dry-run</button>
+      <button id="pfUse" class="primary" disabled>Use this plan</button>
+    </div>
+    <div id="pfStatus" class="pf-status"></div>
+    <div class="pf-scroll"><table id="pfTable" class="pf-table"></table></div>
+    <div id="pfLists"></div>
+  </div>
+</div>
+<div id="tip" class="tip" hidden></div>
+<div id="dragGhost" class="drag-ghost" hidden></div>
+<script src="static/static_api.js?v=20261108185850"></script>
+<script src="static/studio.js?v=20261108185850"></script>
+<script src="static/models.js?v=20261108185850"></script>
+<script src="static/pump.js?v=20261108185850"></script>
+<script src="static/fx.js?v=20261108185850"></script>
+<script src="static/fxmore.js?v=20261108185850"></script>
+<script src="static/bench.js?v=20261108185850"></script>
+<script src="static/focus.js?v=20261108185850"></script>
+<script src="static/iso.js?v=20261108185850"></script>
+<script src="static/paperlink.js?v=20261108185850"></script>
+<script src="static/gear.js?v=20261108185850"></script>
+<script src="static/prep.js?v=20261108185850"></script>
+<script src="static/demo.js?v=20261108185850"></script>
+<script src="static/planform.js?v=20261108185850"></script>
+<script src="static/genplan.js?v=20261108185850"></script>
+<script src="static/console.js?v=20261108185850"></script>
+<script src="static/devinfo.js?v=20261108185850"></script>
+<script src="static/welcome.js?v=20261108185850"></script>
+</body>
+</html>
