@@ -747,3 +747,5 @@ body.view-iso .iso-only { display: block; }
 .bc-stages li { margin: 4px 0; }
 .bc-tags { font-size: 12px; color: var(--accent); margin-left: 8px; }
 .bc-btns { display: flex; justify-content: flex-end; gap: 10px; padding: 12px 18px 16px; }
+.bc-stages li.llm b, .pp-stages li.llm b { color: #ffc46b; }
+.bc-llm { margin-top: 8px; padding: 6px 10px; border-left: 3px solid #e0a23a; color: #ffd99a; font-size: 12.5px; }

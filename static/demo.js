@@ -306,7 +306,7 @@ function briefHtml(p, cur, f) {
   starts.forEach((i, k) => { if (i <= cur && (now < 0 || i > starts[now])) now = k; });   // (a loop jumping back lands on its own stage)
   h += `<ol class="pp-stages">${b.stages.map((s, k) => {
     const out = (s.show || []).map(val).filter(Boolean).join(" · ");
-    return `<li class="${k === now && !DEMO.done ? "cur" : ""}"><b>${esc(s.title)}</b> — ${esc(s.does || "")}${s.adjust ? ` <span class="muted">(adjusts: ${esc(s.adjust)})</span>` : ""}${out ? `<div class="pp-out">${esc(out)}</div>` : ""}</li>`;
+    return `<li class="${k === now && !DEMO.done ? "cur" : ""}${s.decision ? " llm" : ""}"><b>${s.decision ? "🧠 " : ""}${esc(s.title)}</b> — ${esc(s.does || "")}${s.adjust ? ` <span class="muted">(adjusts: ${esc(s.adjust)})</span>` : ""}${out ? `<div class="pp-out">${esc(out)}</div>` : ""}</li>`;
   }).join("")}</ol>`;
   return h + "</div>";
 }
@@ -321,8 +321,8 @@ function demoConfirmBrief(prep) {
     let body = `<p>${esc(b.summary || prep.plan?.goal || "")}</p>`;
     if ((b.inputs || []).length) body += `<h4>Inputs</h4>${list(b.inputs)}`;
     if ((b.outputs || []).length) body += `<h4>${(b.stages || []).length ? "Outputs" : "Target outputs"}</h4>${list(b.outputs)}`;
-    if ((b.stages || []).length) body += `<h4>Stages</h4><ol class="bc-stages">${b.stages.map((s) => `<li><b>${esc(s.title)}</b> — ${esc(s.does || "")}${s.adjust ? `<div class="muted">adjusts: ${esc(s.adjust)}</div>` : ""}</li>`).join("")}</ol>
-      <div class="muted">Decision stages loop back until the target is met; the LLM (or the plan's rule) decides at each one.</div>`;
+    if ((b.stages || []).length) body += `<h4>Stages</h4><ol class="bc-stages">${b.stages.map((s) => `<li class="${s.decision ? "llm" : ""}"><b>${s.decision ? "🧠 " : ""}${esc(s.title)}</b> — ${esc(s.does || "")}${s.adjust ? `<div class="muted">adjusts: ${esc(s.adjust)}</div>` : ""}</li>`).join("")}</ol>
+      ${b.stages.some((s) => s.decision) ? `<div class="bc-llm">🧠 = the LLM decides here: it reads what the previous stage measured and sets the inputs for the next stage (or says the goal is met). Without an LLM, the plan's rule decides.</div>` : ""}`;
     const m = document.createElement("div");
     m.className = "di-modal";
     m.innerHTML = `<div class="di-box bc-box"><div class="di-head"><b>${esc(prep.title)}</b>${tags.length ? ` <span class="bc-tags">${tags.map(esc).join(" · ")}</span>` : ""}</div>
