@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>agent lab · Experiment studio</title>
-<link rel="stylesheet" href="static/studio.css?v=20261109013730">
+<link rel="stylesheet" href="static/studio.css?v=20261109014450">
 </head>
 <body class="panel-hidden demo-hidden">
 <header class="bar">
@@ -136,42 +136,42 @@
   <div class="wl-box">
     <div class="wl-top"><span class="logo">⬡</span> <b>agent lab</b><span class="muted">General agentic lab · simulator</span></div>
     <h1>A simulation of a general agentic lab</h1>
-    <p class="wl-lead">A chemistry lab where an LLM plans and runs experiments. It simulates many chemical reactions and instruments,
-      and the LLM controls them <b>the same way it would control real ones</b> — same commands, same readings.</p>
+    <p class="wl-lead">An LLM plans and runs chemistry experiments in a simulated lab. It drives the instruments
+      <b>exactly as it would drive real ones</b>: same commands, same kinds of readings.</p>
     <p class="wl-online">This online demo replays runs recorded with the simulator: browse equipment, double-click devices, and press ▶ Start to watch an experiment. Editing the bench, generating plans from papers and live LLM planning need the full app.</p><div class="wl-kpis" id="wlKpis"></div>
 
-    <h2>What the LLM does here</h2>
-    <div class="wl-cards">
+    <h2>What the LLM does</h2>
+    <div class="wl-cards three">
       <div class="wl-card">
-        <h3>Automated experiments</h3>
-        <p class="muted">Instruments do the work: pump dosing, stirring, heating, probe / spectral readings.</p>
-        <ul>
-          <li>Writes the plan from a paper or brief</li>
-          <li>Sets instrument parameters</li>
-          <li>Monitors readings and adjusts</li>
-        </ul>
-        <p class="wl-eg">e.g. four-pump colour mixing, titration, calorimetry</p>
+        <h3>📄 Writes the plan</h3>
+        <p>Paste a paper link. The LLM reads the methods and the lab checks it has the instruments, reagents and chemistry.
+          You get a runnable plan, or a clear <i>not compatible</i> with the reasons.</p>
       </div>
       <div class="wl-card">
-        <h3>Experiments needing physical actions</h3>
-        <p class="muted">Moving containers, tubing, probes, filtering, weighing solids.</p>
-        <ul>
-          <li><b>Human help</b>: actions go out as task cards</li>
-          <li><b>Robot arm</b>: does what it can; humans do the rest</li>
-          <li>One-off assembly is done before the run</li>
-        </ul>
-        <p class="wl-eg">e.g. foam half-life, aspirin synthesis</p>
+        <h3>👀 Runs and watches</h3>
+        <p>Sets instrument parameters, follows the readings and stops for a human if the data look wrong.</p>
+      </div>
+      <div class="wl-card">
+        <h3>🧠 Decides between rounds</h3>
+        <p>In closed-loop experiments it reads what was measured and chooses the next round's inputs, until the goal is met.</p>
       </div>
     </div>
-    <div class="wl-warn"><b>Robot-arm simulation and design are still immature</b>: only reach (xArm 6, 700 mm), travel time,
-      assumed grasp success, compatible containers and 8 basic operations are modelled; no kinematics, collisions or vision.
-      Tubing, filtering and weighing solids are still done by people.</div>
+
+    <h2>Every plan has two labels</h2>
+    <div class="wl-labels">
+      <div><b>Open loop</b><span>Fixed steps from start to finish.</span><i>e.g. strong-acid titration</i></div>
+      <div><b>Closed loop 🧠</b><span>Measure → LLM decides → adjust → repeat.</span><i>e.g. colour matching, buffer pH</i></div>
+      <div><b>Auto</b><span>Instruments and the robot arm do every step.</span><i>e.g. four-pump colour matching</i></div>
+      <div><b>Needs human</b><span>Some steps (tubing, filtering, weighing solids) go to a person as task cards.</span><i>e.g. foam half-life</i></div>
+    </div>
+    <div class="wl-warn"><b>The robot arm is a simple model</b>: reach (xArm 6, 700 mm), travel time and 8 basic operations.
+      No kinematics, collisions or vision yet.</div>
 
     <h2>How to use</h2>
     <ol class="wl-steps">
-      <li>Pick an experiment in the <b>prep library</b>, plus executor and speed</li>
-      <li>Press <b>▶ Start</b> (top right) to watch setup and the run</li>
-      <li>Press <b>←</b> to generate a plan from a paper link, or fill one in by hand</li>
+      <li>Pick an experiment in the <b>prep library</b> (its labels are shown on it)</li>
+      <li>Press <b>▶ Start</b>: watch the bench being set up, then the run. Subtitles say what is happening; 🧠 marks each LLM decision</li>
+      <li>Press <b>←</b> to paste a paper link and generate a plan, or fill one in by hand</li>
       <li>Double-click any device for details</li>
     </ol>
     <div class="wl-foot"><a class="link" href="intro.html" target="_blank">More: how it works, what's been tested ↗</a><span class="sp"></span>
@@ -242,24 +242,24 @@
 </div>
 <div id="tip" class="tip" hidden></div>
 <div id="dragGhost" class="drag-ghost" hidden></div>
-<script src="static/static_api.js?v=20261109013730"></script>
-<script src="static/studio.js?v=20261109013730"></script>
-<script src="static/models.js?v=20261109013730"></script>
-<script src="static/pump.js?v=20261109013730"></script>
-<script src="static/fx.js?v=20261109013730"></script>
-<script src="static/caption.js?v=20261109013730"></script>
-<script src="static/fxmore.js?v=20261109013730"></script>
-<script src="static/bench.js?v=20261109013730"></script>
-<script src="static/focus.js?v=20261109013730"></script>
-<script src="static/iso.js?v=20261109013730"></script>
-<script src="static/paperlink.js?v=20261109013730"></script>
-<script src="static/gear.js?v=20261109013730"></script>
-<script src="static/prep.js?v=20261109013730"></script>
-<script src="static/demo.js?v=20261109013730"></script>
-<script src="static/planform.js?v=20261109013730"></script>
-<script src="static/genplan.js?v=20261109013730"></script>
-<script src="static/console.js?v=20261109013730"></script>
-<script src="static/devinfo.js?v=20261109013730"></script>
-<script src="static/welcome.js?v=20261109013730"></script>
+<script src="static/static_api.js?v=20261109014450"></script>
+<script src="static/studio.js?v=20261109014450"></script>
+<script src="static/models.js?v=20261109014450"></script>
+<script src="static/pump.js?v=20261109014450"></script>
+<script src="static/fx.js?v=20261109014450"></script>
+<script src="static/caption.js?v=20261109014450"></script>
+<script src="static/fxmore.js?v=20261109014450"></script>
+<script src="static/bench.js?v=20261109014450"></script>
+<script src="static/focus.js?v=20261109014450"></script>
+<script src="static/iso.js?v=20261109014450"></script>
+<script src="static/paperlink.js?v=20261109014450"></script>
+<script src="static/gear.js?v=20261109014450"></script>
+<script src="static/prep.js?v=20261109014450"></script>
+<script src="static/demo.js?v=20261109014450"></script>
+<script src="static/planform.js?v=20261109014450"></script>
+<script src="static/genplan.js?v=20261109014450"></script>
+<script src="static/console.js?v=20261109014450"></script>
+<script src="static/devinfo.js?v=20261109014450"></script>
+<script src="static/welcome.js?v=20261109014450"></script>
 </body>
 </html>

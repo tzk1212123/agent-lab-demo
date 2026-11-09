@@ -772,3 +772,12 @@ body.view-iso .iso-only { display: block; }
 .scrub-marks i { position: absolute; top: -14px; transform: translateX(-50%); font-style: normal; font-size: 14px; pointer-events: auto; cursor: default; }
 .timeline { position: relative; }
 .pp-stages li.fold { opacity: .55; }
+.wl-cards.three { grid-template-columns: repeat(3, 1fr); }
+.wl-card p { color: var(--ink2); line-height: 1.45; }
+.wl-labels { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 12px; }
+.wl-labels > div { display: grid; grid-template-columns: 118px 1fr; column-gap: 10px; align-items: baseline;
+  padding: 7px 12px; border-radius: 10px; background: var(--panel); border: 1px solid var(--line); font-size: 13px; }
+.wl-labels b { color: var(--ink); grid-row: span 2; }
+.wl-labels span { color: var(--ink2); }
+.wl-labels i { color: var(--ink3); font-size: 12px; font-style: normal; }
+@media (max-width: 760px) { .wl-cards.three, .wl-labels { grid-template-columns: 1fr; } }
